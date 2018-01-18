@@ -1,13 +1,15 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
-using System.Windows.Media;
 using System.Windows.Threading;
+using NAudio.Wave;
 using Newtonsoft.Json;
 using Tweetinvi;
 using Tweetinvi.Models;
@@ -21,7 +23,8 @@ namespace TwitterNotifier
 		public const string TWITTER_API_KEY = "QAqEo4of92uePdh511aL3hLKP";
 		public const string TWITTER_API_SECRET = "nqRY6bpihJiVvwNEz4xfITJf2QAAszoZsDftwzz4kAyJePPh24";
 		private IAuthenticationContext _authorizationContext;
-		private string _notifierBasePath, _notificationPath, _settingsPath;
+		private string _notifierBasePath, _notificationPath, _settingsPath, _namesPath;
+		private readonly IDictionary<string, string> _altNames = new Dictionary<string, string>();
 
 		#endregion
 
@@ -35,6 +38,7 @@ namespace TwitterNotifier
 				_notifierBasePath = Path.Combine(appdata, "twitter-notifier");
 				_notificationPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "notification.wav");
 				_settingsPath = Path.Combine(_notifierBasePath, "settings.json");
+				_namesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "twitterNames.csv");
 				Directory.CreateDirectory(_notifierBasePath);
 				if (File.Exists(_settingsPath))
 				{
@@ -45,6 +49,7 @@ namespace TwitterNotifier
 				{
 					Settings = new TwitterSettings();
 				}
+				ReadAltNames();
 				InitAuth();
 			});
 		}
@@ -107,22 +112,17 @@ namespace TwitterNotifier
 			});
 		}
 
+		[DllImport("Winmm.dll")]
+		public static extern bool PlaySound(byte[] data, IntPtr hMod, UInt32 dwFlags);
+
 		public void PlaySound()
 		{
-			Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+			var data = File.ReadAllBytes(_notificationPath);
+			using (var outputDevice = new WaveOutEvent())
 			{
-				var player = new MediaPlayer();
-				player.MediaOpened += (s, e) =>
-				{
-					player.Volume = Settings.Volume;
-					player.Play();
-				};
-				player.MediaEnded += (s, e) =>
-				{
-					player.Close();
-				};
-				player.Open(new Uri(_notificationPath));
-			}));
+				outputDevice.Volume = (float)Settings.Volume;
+			}
+			PlaySound(data, IntPtr.Zero, 1 | 4);
 		}
 
 		public void SaveSettings()
@@ -141,7 +141,7 @@ namespace TwitterNotifier
 					builder.Append("<br /><br />");
 				}
 				builder.Append("<b>");
-				builder.Append(tweet.CreatedBy.Name);
+				builder.Append(FormatName(tweet.CreatedBy.ScreenName, tweet.CreatedBy.Name));
 				builder.Append("</b> @");
 				builder.Append(tweet.CreatedBy.ScreenName);
 				builder.Append(" - ");
@@ -150,6 +150,28 @@ namespace TwitterNotifier
 				builder.Append(FormatText(tweet.FullText));
 			}
 			return builder.ToString();
+		}
+
+		public string FormatName(string screenName, string fallbackName)
+		{
+			string name;
+			if (_altNames.TryGetValue(screenName, out name))
+			{
+				return name;
+			}
+			return fallbackName;
+		}
+
+		public void ReadAltNames()
+		{
+			foreach (var line in File.ReadAllLines(_namesPath))
+			{
+				var parts = line.Split(',');
+				if (parts.Length == 3)
+				{
+					_altNames[parts[0]] = string.Format("{0} ({1})", parts[1], parts[2]);
+				}
+			}
 		}
 
 		#endregion
