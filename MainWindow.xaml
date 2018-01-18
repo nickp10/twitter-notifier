@@ -7,8 +7,74 @@
 	<Window.Resources>
 		<BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 	</Window.Resources>
-	<Grid>
-		<Grid Margin="10"
+	<Grid TextBlock.FontSize="{Binding Settings.FontSize}">
+		<Grid.RowDefinitions>
+			<RowDefinition Height="Auto" />
+			<RowDefinition Height="*" />
+		</Grid.RowDefinitions>
+		<ToggleButton Margin="10"
+					  Padding="2"
+					  Cursor="Hand"
+					  HorizontalAlignment="Right"
+					  x:Name="SettingsButton">
+			<Image Source="pack://application:,,,/settings.png"
+				   Height="32"
+				   Width="32" />
+		</ToggleButton>
+		<Popup PlacementTarget="{Binding ElementName=SettingsButton}"
+			   Placement="Bottom"
+			   StaysOpen="False"
+			   AllowsTransparency="True"
+			   HorizontalOffset="-212"
+			   IsOpen="{Binding ElementName=SettingsButton, Path=IsChecked}">
+			<Border BorderThickness="2"
+					BorderBrush="Black"
+					CornerRadius="2"
+					Background="White"
+					Padding="10"
+					Width="250">
+				<Grid>
+					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="10" />
+						<RowDefinition Height="Auto" />
+					</Grid.RowDefinitions>
+					<Grid.ColumnDefinitions>
+						<ColumnDefinition Width="100" />
+						<ColumnDefinition Width="10" />
+						<ColumnDefinition Width="*" />
+					</Grid.ColumnDefinitions>
+					<Label Grid.Row="0"
+						   Grid.Column="0"
+						   Content="Font Size:"
+						   Target="{Binding ElementName=FontSizeSlider}"
+						   VerticalAlignment="Center" />
+					<Slider Grid.Row="0"
+							Grid.Column="2"
+							Minimum="8"
+							Maximum="18"
+							Value="{Binding Settings.FontSize}"
+							Thumb.DragCompleted="OnFontSizeValueChanged"
+							VerticalAlignment="Center"
+							x:Name="FontSizeSlider" />
+					<Label Grid.Row="2"
+						   Grid.Column="0"
+						   Content="Volume:"
+						   Target="{Binding ElementName=VolumeSlider}"
+						   VerticalAlignment="Center" />
+					<Slider Grid.Row="2"
+							Grid.Column="2"
+							Minimum="0"
+							Maximum="1"
+							Value="{Binding Settings.Volume}"
+							Thumb.DragCompleted="OnVolumeValueChanged"
+							VerticalAlignment="Center"
+							x:Name="VolumeSlider" />
+				</Grid>
+			</Border>
+		</Popup>
+		<Grid Grid.Row="1"
+			  Margin="10"
 			  Visibility="{Binding IsAuthorizing, Converter={StaticResource BooleanToVisibilityConverter}}">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto" />
@@ -24,18 +90,19 @@
 			</Grid.RowDefinitions>
 			<TextBlock Grid.Row="0"
 					   Grid.ColumnSpan="3"
-					   HorizontalAlignment="Center"
-					   FontSize="18">
+					   HorizontalAlignment="Center">
 				<Hyperlink NavigateUri="{Binding AuthorizationURL}"
 						   RequestNavigate="OnLoginNavigate">Login to Twitter</Hyperlink>
 			</TextBlock>
 			<Label Grid.Row="2"
 				   Grid.Column="0"
 				   Content="Enter the PIN from the Login:"
-				   Target="{Binding ElementName=CaptchaTextBox}" />
+				   Target="{Binding ElementName=CaptchaTextBox}"
+				   VerticalAlignment="Center" />
 			<TextBox Grid.Row="2"
 					 Grid.Column="2"
 					 Text="{Binding AuthorizationCaptcha}"
+					 VerticalAlignment="Center"
 					 x:Name="CaptchaTextBox" />
 			<Button Grid.Row="4"
 					Grid.ColumnSpan="3"
@@ -44,7 +111,8 @@
 					Padding="10,5"
 					HorizontalAlignment="Center" />
 		</Grid>
-		<ScrollViewer Visibility="{Binding IsMonitoringTweets, Converter={StaticResource BooleanToVisibilityConverter}}"
+		<ScrollViewer Grid.Row="1"
+					  Visibility="{Binding IsMonitoringTweets, Converter={StaticResource BooleanToVisibilityConverter}}"
 					  VerticalScrollBarVisibility="Auto">
 			<ItemsControl ItemsSource="{Binding Tweets}"
 						  Margin="10,0">

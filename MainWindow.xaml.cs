@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.Windows;
+using System.Windows.Controls.Primitives;
 using System.Windows.Navigation;
 
 namespace TwitterNotifier
@@ -25,6 +26,25 @@ namespace TwitterNotifier
 		{
 			Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri));
 			e.Handled = true;
+		}
+
+		private void OnFontSizeValueChanged(object sender, DragCompletedEventArgs e)
+		{
+			var vm = DataContext as TwitterNotifierViewModel;
+			if (vm != null)
+			{
+				vm.SaveSettings();
+			}
+		}
+
+		private void OnVolumeValueChanged(object sender, DragCompletedEventArgs e)
+		{
+			var vm = DataContext as TwitterNotifierViewModel;
+			if (vm != null)
+			{
+				vm.PlaySound();
+				vm.SaveSettings();
+			}
 		}
 	}
 }
