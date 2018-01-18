@@ -33,7 +33,7 @@ namespace TwitterNotifier
 			{
 				var appdata = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
 				_notifierBasePath = Path.Combine(appdata, "twitter-notifier");
-				_notificationPath = Path.Combine(_notifierBasePath, "notification.mp3");
+				_notificationPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "notification.wav");
 				_settingsPath = Path.Combine(_notifierBasePath, "settings.json");
 				Directory.CreateDirectory(_notifierBasePath);
 				if (File.Exists(_settingsPath))
@@ -45,16 +45,6 @@ namespace TwitterNotifier
 				{
 					Settings = new TwitterSettings();
 				}
-				if (!File.Exists(_notificationPath))
-				{
-					using (var stream = Application.GetResourceStream(new Uri("pack://application:,,,/notification.mp3")).Stream)
-					{
-						using (var file = File.Create(_notificationPath))
-						{
-							stream.CopyTo(file);
-						}
-					}
-				}
 				InitAuth();
 			});
 		}
@@ -65,6 +55,7 @@ namespace TwitterNotifier
 
 		public void InitAuth()
 		{
+			IsLoginScreen = true;
 			var applicationCredentials = new ConsumerCredentials(TWITTER_API_KEY, TWITTER_API_SECRET);
 			_authorizationContext = AuthFlow.InitAuthentication(applicationCredentials);
 			AuthorizationURL = _authorizationContext.AuthorizationURL;
@@ -72,6 +63,7 @@ namespace TwitterNotifier
 
 		public void Authenticate()
 		{
+			IsNotAuthorizing = false;
 			ThreadPool.QueueUserWorkItem(q =>
 			{
 				try
@@ -89,16 +81,16 @@ namespace TwitterNotifier
 							}
 							TweetsHTML = BuildHTML();
 						}));
-						IsAuthorizing = false;
-						IsMonitoringTweets = true;
+						IsLoginScreen = false;
+						IsTweetScreen = true;
 					};
 					stream.TweetCreatedByAnyone += (s, e) =>
 					{
 						Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
 						{
+							PlaySound();
 							Tweets.Insert(0, e.Tweet);
 							TweetsHTML = BuildHTML();
-							PlaySound();
 						}));
 					};
 					stream.StartStream();
@@ -107,6 +99,10 @@ namespace TwitterNotifier
 				{
 					InitAuth();
 					MessageBox.Show("Invalid credentials specified. Please try again.");
+				}
+				finally
+				{
+					IsNotAuthorizing = true;
 				}
 			});
 		}
@@ -146,7 +142,8 @@ namespace TwitterNotifier
 				}
 				builder.Append("<b>");
 				builder.Append(tweet.CreatedBy.Name);
-				builder.Append("</b>");
+				builder.Append("</b> @");
+				builder.Append(tweet.CreatedBy.ScreenName);
 				builder.Append(" - ");
 				builder.Append(string.Format("{0:MM/dd/yy hh:mm:ss tt}", tweet.CreatedAt));
 				builder.Append("<br />");
@@ -308,30 +305,44 @@ namespace TwitterNotifier
 			}
 		}
 
-		private bool _isAuthorizing = true;
-		public bool IsAuthorizing
+		private bool _isNotAuthorizing = true;
+		public bool IsNotAuthorizing
 		{
-			get { return _isAuthorizing; }
+			get { return _isNotAuthorizing; }
 			set
 			{
-				if (_isAuthorizing != value)
+				if (_isNotAuthorizing != value)
 				{
-					_isAuthorizing = value;
-					OnPropertyChanged("IsAuthorizing");
+					_isNotAuthorizing = value;
+					OnPropertyChanged("IsNotAuthorizing");
 				}
 			}
 		}
 
-		private bool _isMonitoringTweets;
-		public bool IsMonitoringTweets
+		private bool _isLoginScreen;
+		public bool IsLoginScreen
 		{
-			get { return _isMonitoringTweets; }
+			get { return _isLoginScreen; }
 			set
 			{
-				if (_isMonitoringTweets != value)
+				if (_isLoginScreen != value)
 				{
-					_isMonitoringTweets = value;
-					OnPropertyChanged("IsMonitoringTweets");
+					_isLoginScreen = value;
+					OnPropertyChanged("IsLoginScreen");
+				}
+			}
+		}
+
+		private bool _isTweetScreen;
+		public bool IsTweetScreen
+		{
+			get { return _isTweetScreen; }
+			set
+			{
+				if (_isTweetScreen != value)
+				{
+					_isTweetScreen = value;
+					OnPropertyChanged("IsTweetScreen");
 				}
 			}
 		}

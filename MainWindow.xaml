@@ -4,7 +4,7 @@
 		xmlns:local="clr-namespace:TwitterNotifier"
 		Title="Twitter Notifier"
 		Height="500"
-		Width="500">
+		Width="600">
 	<Window.Resources>
 		<BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 	</Window.Resources>
@@ -76,7 +76,7 @@
 		</Popup>
 		<Grid Grid.Row="1"
 			  Margin="10"
-			  Visibility="{Binding IsAuthorizing, Converter={StaticResource BooleanToVisibilityConverter}}">
+			  Visibility="{Binding IsLoginScreen, Converter={StaticResource BooleanToVisibilityConverter}}">
 			<Grid.ColumnDefinitions>
 				<ColumnDefinition Width="Auto" />
 				<ColumnDefinition Width="10" />
@@ -107,13 +107,14 @@
 					 x:Name="CaptchaTextBox" />
 			<Button Grid.Row="4"
 					Grid.ColumnSpan="3"
+					IsEnabled="{Binding IsNotAuthorizing}"
 					Content="Login"
 					Click="OnLoginClick"
 					Padding="10,5"
 					HorizontalAlignment="Center" />
 		</Grid>
 		<ScrollViewer Grid.Row="1"
-					  Visibility="{Binding IsMonitoringTweets, Converter={StaticResource BooleanToVisibilityConverter}}"
+					  Visibility="{Binding IsTweetScreen, Converter={StaticResource BooleanToVisibilityConverter}}"
 					  VerticalScrollBarVisibility="Auto">
 			<RichTextBox BorderThickness="0"
 						 Background="Transparent"
