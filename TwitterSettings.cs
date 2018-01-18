@@ -6,7 +6,7 @@ namespace TwitterNotifier
 	{
 		#region Properties
 
-		private double _fontSize = 16;
+		private double _fontSize = 18;
 		public double FontSize
 		{
 			get { return _fontSize; }
