@@ -26,7 +26,7 @@
 			   Placement="Bottom"
 			   StaysOpen="False"
 			   AllowsTransparency="True"
-			   HorizontalOffset="-212"
+			   HorizontalOffset="-262"
 			   IsOpen="{Binding ElementName=SettingsButton, Path=IsChecked}">
 			<Border BorderThickness="2"
 					BorderBrush="Black"
