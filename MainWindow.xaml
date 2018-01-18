@@ -1,9 +1,10 @@
 ﻿<Window x:Class="TwitterNotifier.MainWindow"
 		xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
 		xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+		xmlns:local="clr-namespace:TwitterNotifier"
 		Title="Twitter Notifier"
-		Height="350"
-		Width="525">
+		Height="500"
+		Width="500">
 	<Window.Resources>
 		<BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 	</Window.Resources>
@@ -32,7 +33,7 @@
 					CornerRadius="2"
 					Background="White"
 					Padding="10"
-					Width="250">
+					Width="300">
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto" />
@@ -40,7 +41,7 @@
 						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="100" />
+						<ColumnDefinition Width="120" />
 						<ColumnDefinition Width="10" />
 						<ColumnDefinition Width="*" />
 					</Grid.ColumnDefinitions>
@@ -52,7 +53,7 @@
 					<Slider Grid.Row="0"
 							Grid.Column="2"
 							Minimum="8"
-							Maximum="18"
+							Maximum="24"
 							Value="{Binding Settings.FontSize}"
 							Thumb.DragCompleted="OnFontSizeValueChanged"
 							VerticalAlignment="Center"
@@ -114,23 +115,11 @@
 		<ScrollViewer Grid.Row="1"
 					  Visibility="{Binding IsMonitoringTweets, Converter={StaticResource BooleanToVisibilityConverter}}"
 					  VerticalScrollBarVisibility="Auto">
-			<ItemsControl ItemsSource="{Binding Tweets}"
-						  Margin="10,0">
-				<ItemsControl.ItemTemplate>
-					<DataTemplate>
-						<StackPanel Margin="0,0,0,10">
-							<TextBlock>
-								<TextBlock Text="{Binding CreatedBy.Name}"
-										   FontWeight="Bold" />
-								<Run>-</Run>
-								<TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:MM/dd/yy hh:mm:ss tt}'}" />
-							</TextBlock>
-							<TextBlock Text="{Binding FullText}"
-									   TextWrapping="Wrap" />
-						</StackPanel>
-					</DataTemplate>
-				</ItemsControl.ItemTemplate>
-			</ItemsControl>
+			<RichTextBox BorderThickness="0"
+						 Background="Transparent"
+						 IsDocumentEnabled="True"
+						 IsReadOnly="True"
+						 local:RichTextBoxExtensions.Text="{Binding TweetsHTML}" />
 		</ScrollViewer>
 	</Grid>
 </Window>

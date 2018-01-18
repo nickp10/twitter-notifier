@@ -2,7 +2,8 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
-using System.Media;
+using System.Text;
+using System.Text.RegularExpressions;
 using System.Threading;
 using System.Windows;
 using System.Windows.Media;
@@ -86,6 +87,7 @@ namespace TwitterNotifier
 							{
 								Tweets.Add(tweet);
 							}
+							TweetsHTML = BuildHTML();
 						}));
 						IsAuthorizing = false;
 						IsMonitoringTweets = true;
@@ -95,6 +97,7 @@ namespace TwitterNotifier
 						Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
 						{
 							Tweets.Insert(0, e.Tweet);
+							TweetsHTML = BuildHTML();
 							PlaySound();
 						}));
 					};
@@ -130,6 +133,147 @@ namespace TwitterNotifier
 		{
 			var contents = JsonConvert.SerializeObject(Settings);
 			File.WriteAllText(_settingsPath, contents);
+		}
+
+		public string BuildHTML()
+		{
+			var builder = new StringBuilder();
+			foreach (var tweet in Tweets)
+			{
+				if (builder.Length != 0)
+				{
+					builder.Append("<br /><br />");
+				}
+				builder.Append("<b>");
+				builder.Append(tweet.CreatedBy.Name);
+				builder.Append("</b>");
+				builder.Append(" - ");
+				builder.Append(string.Format("{0:MM/dd/yy hh:mm:ss tt}", tweet.CreatedAt));
+				builder.Append("<br />");
+				builder.Append(FormatText(tweet.FullText));
+			}
+			return builder.ToString();
+		}
+
+		#endregion
+
+		#region Format Methods
+
+		private string FormatText(string text)
+		{
+			text = FormatAmpersands(text);
+			text = FormatHyperlinks(text);
+			text = FormatTags(text);
+			return FormatLineBreaks(text);
+		}
+
+		private string FormatAmpersands(string text)
+		{
+			var pattern = @"(?xi)
+							(
+							  &						# Match '&'
+							  (?!					# only if it's not followed by
+							    (?:					# either
+							      \#[0-9]+			# a '#' and a decimal value
+							      |					# or
+							      \#x[0-9a-fA-F]+	# a '#' and a hexadecimal value
+							      |					# or
+							      [a-zA-Z]\w*		# a letter followed by word characters
+							    )
+							    ;					# and a semicolon
+							  )						# End of lookahead assertion
+							)";
+			var regex = new Regex(pattern, RegexOptions.IgnoreCase);
+			return regex.Replace(text, "$1amp;");
+		}
+
+		private string FormatHyperlinks(string text)
+		{
+			return FormatURLs(FormatEmails(text));
+		}
+
+		private string FormatTags(string text)
+		{
+			/* Regex: (?xi)(<(?!(?:a|/a|img|embed)\b))
+			 * Description: Change all '<' symbols not followed by 'a', '/a', 'img' or 'embed' into their 
+			 * html equivalent.
+			*/
+			var pattern = @"(?xi)					
+							(
+							  <						# Match '<'					
+							  (?!					# only if it's not followed by
+							    (?:					# either
+								  a					# 'a'
+								  |					# or
+								  /a				# '/a'
+								  |					# or
+								  img				# 'img'
+								  |					# or
+								  embed				# 'embed'
+							    )
+								\b					# a word boundary
+							  )						# End of lookahead assertion		
+							)";
+
+			var regex = new Regex(pattern, RegexOptions.IgnoreCase);
+			return regex.Replace(text, "&#60;");
+		}
+
+		private string FormatEmails(string text)
+		{
+			/* This pattern was taken from http://www.regular-expressions.info/email.html.
+			 * 
+			 * Two options mentioned in the article were used:
+			 * 1. allow up to 6 characters in the top-level domain
+			 * 2. do not allow multiple adjacent dots (e.g. john@aol...com)
+			 * 
+			 * Also the regex was modified slightly so that there must be white space (or the beginning of the string)
+			 * before the email. This is to prevent the regex from wrapping the href of an existing link.
+			 */
+			var emailPattern = @"(\s|^)(mailto:)?([A-Z0-9._%+-]+@(?:[A-Z0-9-]+\.)+[A-Z]{2,6})\b";
+			var regex = new Regex(emailPattern, RegexOptions.IgnoreCase);
+			return regex.Replace(text, "$1<a href=\"mailto:$3\">$2$3</a>");
+		}
+
+		private string FormatURLs(string text)
+		{
+			/* This regex pattern was taken and modified from http://daringfireball.net/2010/07/improved_regex_for_matching_urls.
+			 * The comments were left in place for ease in understanding.
+			 * 
+			 * Two changes were made to the original:
+			 * 1. there must be whitespace (or the beginning of the string) before the URL to prevent
+			 *    wrapping the href of an existing link
+			 * 2. http, https, ftp, app, and file protocols are allowed
+			 */
+			var urlPattern = @"(?xi)
+								(\s|^)											# EDIT: This was modified from \b
+								(												# Capture 1: entire matched URL
+								  (?:
+									(?:https?://|ftp://|app:|file://)			# EDIT: This was modified to include http, https, ftp, app, and file
+									|											#   or
+									www\d{0,3}[.]								# ""www."", ""www1."", ""www2."" … ""www999.""
+									|											#   or
+									[a-z0-9.\-]+[.][a-z]{2,4}/					# looks like domain name followed by a slash
+								  )
+								  (?:											# One or more:
+									[^\s()<>]+									# Run of non-space, non-()<>
+									|											#   or
+									\(([^\s()<>]+|(\([^\s()<>]+\)))*\)			# balanced parens, up to 2 levels
+								  )+
+								  (?:											# End with:
+									\(([^\s()<>]+|(\([^\s()<>]+\)))*\)			# balanced parens, up to 2 levels
+									|											#   or
+									[^\s`!()\[\]{};:'"".,<>?«»“”‘’]				# not a space or one of these punct chars
+								  )
+								)";
+
+			var regex = new Regex(urlPattern, RegexOptions.IgnoreCase);
+			return regex.Replace(text, "$1<a href=\"$2\">$2</a>").Replace("href=\"www", "href=\"http://www");
+		}
+
+		private string FormatLineBreaks(string text)
+		{
+			return Regex.Replace(text, @"\r\n?|\n", "<br />"); ;
 		}
 
 		#endregion
@@ -202,6 +346,20 @@ namespace TwitterNotifier
 				{
 					_settings = value;
 					OnPropertyChanged("Settings");
+				}
+			}
+		}
+
+		private string _tweetsHTML;
+		public string TweetsHTML
+		{
+			get { return _tweetsHTML; }
+			set
+			{
+				if (_tweetsHTML != value)
+				{
+					_tweetsHTML = value;
+					OnPropertyChanged("TweetsHTML");
 				}
 			}
 		}

@@ -117,6 +117,8 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="HtmlToXamlConverter.cs" />
+    <Compile Include="RichTextBoxExtensions.cs" />
     <Compile Include="TwitterNotifierViewModel.cs" />
     <Compile Include="TwitterSettings.cs" />
     <Page Include="MainWindow.xaml">
