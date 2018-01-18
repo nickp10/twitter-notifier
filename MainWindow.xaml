@@ -8,22 +8,61 @@
 		<BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 	</Window.Resources>
 	<Grid>
-		<StackPanel Visibility="{Binding IsAuthorizing, Converter={StaticResource BooleanToVisibilityConverter}}">
-			<TextBlock><Hyperlink NavigateUri="{Binding AuthorizationURL}"
-								  RequestNavigate="OnLoginNavigate">Login to Twitter</Hyperlink></TextBlock>
-			<Label>Enter the PIN:</Label>
-			<TextBox Text="{Binding AuthorizationCaptcha}" />
-			<Button Content="Login"
-					Click="OnLoginClick" />
-		</StackPanel>
-		<StackPanel Visibility="{Binding IsMonitoringTweets, Converter={StaticResource BooleanToVisibilityConverter}}">
-			<ItemsControl ItemsSource="{Binding Tweets}">
+		<Grid Margin="10"
+			  Visibility="{Binding IsAuthorizing, Converter={StaticResource BooleanToVisibilityConverter}}">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="10" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="10" />
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="10" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
+			<TextBlock Grid.Row="0"
+					   Grid.ColumnSpan="3"
+					   HorizontalAlignment="Center"
+					   FontSize="18">
+				<Hyperlink NavigateUri="{Binding AuthorizationURL}"
+						   RequestNavigate="OnLoginNavigate">Login to Twitter</Hyperlink>
+			</TextBlock>
+			<Label Grid.Row="2"
+				   Grid.Column="0"
+				   Content="Enter the PIN from the Login:"
+				   Target="{Binding ElementName=CaptchaTextBox}" />
+			<TextBox Grid.Row="2"
+					 Grid.Column="2"
+					 Text="{Binding AuthorizationCaptcha}"
+					 x:Name="CaptchaTextBox" />
+			<Button Grid.Row="4"
+					Grid.ColumnSpan="3"
+					Content="Login"
+					Click="OnLoginClick"
+					Padding="10,5"
+					HorizontalAlignment="Center" />
+		</Grid>
+		<ScrollViewer Visibility="{Binding IsMonitoringTweets, Converter={StaticResource BooleanToVisibilityConverter}}"
+					  VerticalScrollBarVisibility="Auto">
+			<ItemsControl ItemsSource="{Binding Tweets}"
+						  Margin="10,0">
 				<ItemsControl.ItemTemplate>
 					<DataTemplate>
-						<TextBlock Text="{Binding FullText}" />
+						<StackPanel Margin="0,0,0,10">
+							<TextBlock>
+								<TextBlock Text="{Binding CreatedBy.Name}"
+										   FontWeight="Bold" />
+								<Run>-</Run>
+								<TextBlock Text="{Binding CreatedAt, StringFormat='{}{0:MM/dd/yy hh:mm:ss tt}'}" />
+							</TextBlock>
+							<TextBlock Text="{Binding FullText}"
+									   TextWrapping="Wrap" />
+						</StackPanel>
 					</DataTemplate>
 				</ItemsControl.ItemTemplate>
 			</ItemsControl>
-		</StackPanel>
+		</ScrollViewer>
 	</Grid>
 </Window>

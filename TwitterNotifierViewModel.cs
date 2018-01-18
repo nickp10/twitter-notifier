@@ -49,6 +49,14 @@ namespace TwitterNotifier
 					var stream = Stream.CreateUserStream(credentials);
 					stream.StreamStarted += (s, e) =>
 					{
+						Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+						{
+							Auth.SetCredentials(credentials);
+							foreach (var tweet in Timeline.GetHomeTimeline())
+							{
+								Tweets.Add(tweet);
+							}
+						}));
 						IsAuthorizing = false;
 						IsMonitoringTweets = true;
 					};
@@ -56,7 +64,7 @@ namespace TwitterNotifier
 					{
 						Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
 						{
-							Tweets.Add(e.Tweet);
+							Tweets.Insert(0, e.Tweet);
 							var player = new SoundPlayer(TwitterNotifier.Properties.Resources.notification);
 							player.PlaySync();
 						}));
