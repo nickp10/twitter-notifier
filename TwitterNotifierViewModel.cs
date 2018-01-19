@@ -136,18 +136,18 @@ namespace TwitterNotifier
 			var builder = new StringBuilder();
 			foreach (var tweet in Tweets)
 			{
-				if (builder.Length != 0)
-				{
-					builder.Append("<br /><br />");
-				}
+				builder.Append("<div style=\"background-color: #FFFFFF; padding: 5px; margin-top: 10px; margin-left: 5px; margin-right: 5px; margin-bottom: 10px;\">");
 				builder.Append("<b>");
 				builder.Append(FormatName(tweet.CreatedBy.ScreenName, tweet.CreatedBy.Name));
-				builder.Append("</b> @");
+				builder.Append("</b> <a href=\"https://twitter.com/");
 				builder.Append(tweet.CreatedBy.ScreenName);
-				builder.Append(" - ");
+				builder.Append("\" style=\"color: #657786\">@");
+				builder.Append(tweet.CreatedBy.ScreenName);
+				builder.Append("</a> - ");
 				builder.Append(string.Format("{0:MM/dd/yy hh:mm:ss tt}", tweet.CreatedAt));
 				builder.Append("<br />");
 				builder.Append(FormatText(tweet.FullText));
+				builder.Append("</div>");
 			}
 			return builder.ToString();
 		}
@@ -167,9 +167,25 @@ namespace TwitterNotifier
 			foreach (var line in File.ReadAllLines(_namesPath))
 			{
 				var parts = line.Split(',');
-				if (parts.Length == 3)
+				if (parts.Length >= 2)
 				{
-					_altNames[parts[0]] = string.Format("{0} ({1})", parts[1], parts[2]);
+					var nameBuilder = new StringBuilder();
+					nameBuilder.Append(parts[1]);
+					if (parts.Length >= 3 && !string.IsNullOrWhiteSpace(parts[2]))
+					{
+						nameBuilder.Append(" (");
+						nameBuilder.Append(parts[2]);
+						nameBuilder.Append(")");
+					}
+					if (parts.Length >= 5 && !string.IsNullOrWhiteSpace(parts[3]) && !string.IsNullOrWhiteSpace(parts[4]))
+					{
+						nameBuilder.Append(" <a href=\"");
+						nameBuilder.Append(parts[4]);
+						nameBuilder.Append("\">");
+						nameBuilder.Append(parts[3]);
+						nameBuilder.Append("</a>");
+					}
+					_altNames[parts[0]] = nameBuilder.ToString();
 				}
 			}
 		}
