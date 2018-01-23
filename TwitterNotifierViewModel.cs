@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.ComponentModel;
 using System.IO;
+using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -23,7 +24,9 @@ namespace TwitterNotifier
 		public const string TWITTER_API_KEY = "QAqEo4of92uePdh511aL3hLKP";
 		public const string TWITTER_API_SECRET = "nqRY6bpihJiVvwNEz4xfITJf2QAAszoZsDftwzz4kAyJePPh24";
 		private IAuthenticationContext _authorizationContext;
-		private string _notifierBasePath, _notificationPath, _settingsPath, _namesPath;
+		private string _settingsPath, _namesPath;
+		private readonly string[] _urgentHandles;
+		private readonly byte[] _normalNotification, _urgentNotification;
 		private readonly IDictionary<string, string> _altNames = new Dictionary<string, string>();
 
 		#endregion
@@ -32,25 +35,36 @@ namespace TwitterNotifier
 
 		public TwitterNotifierViewModel()
 		{
+			var appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
+			var appDataBasePath = Path.Combine(appData, "twitter-notifier");
+			var configBasePath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Configuration");
+			_settingsPath = Path.Combine(appDataBasePath, "settings.json");
+			_namesPath = Path.Combine(configBasePath, "twitterNames.csv");
+			_normalNotification = File.ReadAllBytes(Path.Combine(configBasePath, "notification.wav"));
+			_urgentNotification = File.ReadAllBytes(Path.Combine(configBasePath, "urgentNotification.wav"));
+			_urgentHandles = File.ReadAllLines(Path.Combine(configBasePath, "urgentHandles.txt"));
+			Directory.CreateDirectory(appDataBasePath);
+			if (File.Exists(_settingsPath))
+			{
+				var contents = File.ReadAllText(_settingsPath);
+				Settings = JsonConvert.DeserializeObject<TwitterSettings>(contents);
+			}
+			else
+			{
+				Settings = new TwitterSettings();
+			}
 			ThreadPool.QueueUserWorkItem(q =>
 			{
-				var appdata = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-				_notifierBasePath = Path.Combine(appdata, "twitter-notifier");
-				_notificationPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "notification.wav");
-				_settingsPath = Path.Combine(_notifierBasePath, "settings.json");
-				_namesPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "twitterNames.csv");
-				Directory.CreateDirectory(_notifierBasePath);
-				if (File.Exists(_settingsPath))
+				ReadAltNames();
+				if (!string.IsNullOrEmpty(Settings.AuthKey) && !string.IsNullOrEmpty(Settings.AuthSecret))
 				{
-					var contents = File.ReadAllText(_settingsPath);
-					Settings = JsonConvert.DeserializeObject<TwitterSettings>(contents);
+					var credentials = new TwitterCredentials(TWITTER_API_KEY, TWITTER_API_SECRET, Settings.AuthKey, Settings.AuthSecret);
+					SubscribeToUserStream(credentials);
 				}
 				else
 				{
-					Settings = new TwitterSettings();
+					InitAuth();
 				}
-				ReadAltNames();
-				InitAuth();
 			});
 		}
 
@@ -61,9 +75,18 @@ namespace TwitterNotifier
 		public void InitAuth()
 		{
 			IsLoginScreen = true;
+			IsTweetScreen = false;
 			var applicationCredentials = new ConsumerCredentials(TWITTER_API_KEY, TWITTER_API_SECRET);
 			_authorizationContext = AuthFlow.InitAuthentication(applicationCredentials);
 			AuthorizationURL = _authorizationContext.AuthorizationURL;
+		}
+
+		public void Logout()
+		{
+			Settings.AuthKey = null;
+			Settings.AuthSecret = null;
+			Tweets.Clear();
+			InitAuth();
 		}
 
 		public void Authenticate()
@@ -74,53 +97,107 @@ namespace TwitterNotifier
 				try
 				{
 					var credentials = AuthFlow.CreateCredentialsFromVerifierCode(AuthorizationCaptcha, _authorizationContext);
-					var stream = Tweetinvi.Stream.CreateUserStream(credentials);
-					stream.StreamStarted += (s, e) =>
+					AuthorizationCaptcha = null;
+					if (Settings.RememberMe)
 					{
-						Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-						{
-							Auth.SetCredentials(credentials);
-							foreach (var tweet in Timeline.GetHomeTimeline())
-							{
-								Tweets.Add(tweet);
-							}
-							TweetsHTML = BuildHTML();
-						}));
-						IsLoginScreen = false;
-						IsTweetScreen = true;
-					};
-					stream.TweetCreatedByAnyone += (s, e) =>
+						Settings.AuthKey = credentials.AccessToken;
+						Settings.AuthSecret = credentials.AccessTokenSecret;
+					}
+					else
 					{
-						Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-						{
-							PlaySound();
-							Tweets.Insert(0, e.Tweet);
-							TweetsHTML = BuildHTML();
-						}));
-					};
-					stream.StartStream();
+						Settings.AuthKey = null;
+						Settings.AuthSecret = null;
+					}
+					SubscribeToUserStream(credentials);
 				}
 				catch
 				{
+					IsNotAuthorizing = true;
 					InitAuth();
 					MessageBox.Show("Invalid credentials specified. Please try again.");
 				}
-				finally
-				{
-					IsNotAuthorizing = true;
-				}
 			});
+		}
+
+		private bool Filter(ITweet tweet)
+		{
+			if (Settings.IgnoreRetweets && tweet.IsRetweet)
+			{
+				return false;
+			}
+			if (Settings.IgnoreReplyTos && !string.IsNullOrEmpty(tweet.InReplyToScreenName))
+			{
+				return false;
+			}
+			return true;
+		}
+
+		private bool IsUrgent(ITweet tweet)
+		{
+			return _urgentHandles.Contains(tweet.CreatedBy.ScreenName);
+		}
+
+		private void SubscribeToUserStream(ITwitterCredentials credentials)
+		{
+			var stream = Tweetinvi.Stream.CreateUserStream(credentials);
+			stream.StreamStarted += (s, e) =>
+			{
+				Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+				{
+					Auth.SetCredentials(credentials);
+					foreach (var tweet in Timeline.GetHomeTimeline())
+					{
+						if (Filter(tweet))
+						{
+							Tweets.Add(tweet);
+						}
+					}
+					TweetsHTML = BuildHTML();
+				}));
+				IsLoginScreen = false;
+				IsTweetScreen = true;
+				IsNotAuthorizing = true;
+			};
+			stream.TweetCreatedByAnyone += (s, e) =>
+			{
+				Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+				{
+					if (Filter(e.Tweet))
+					{
+						if (IsUrgent(e.Tweet))
+						{
+							PlayUrgentNotification();
+						}
+						else
+						{
+							PlayNormalNotification();
+						}
+						Tweets.Insert(0, e.Tweet);
+						TweetsHTML = BuildHTML();
+					}
+				}));
+			};
+			stream.StartStream();
 		}
 
 		[DllImport("Winmm.dll")]
 		public static extern bool PlaySound(byte[] data, IntPtr hMod, UInt32 dwFlags);
 
-		public void PlaySound()
+		public void PlayNormalNotification()
 		{
-			var data = File.ReadAllBytes(_notificationPath);
+			PlaySound(_normalNotification, Settings.Volume);
+		}
+
+		public void PlayUrgentNotification()
+		{
+			PlaySound(_urgentNotification, Settings.UrgentVolume);
+		}
+
+		private void PlaySound(byte[] data, double volume)
+		{
 			using (var outputDevice = new WaveOutEvent())
 			{
-				outputDevice.Volume = (float)Settings.Volume;
+				outputDevice.Volume = (float)volume;
 			}
 			PlaySound(data, IntPtr.Zero, 1 | 4);
 		}
@@ -188,6 +265,19 @@ namespace TwitterNotifier
 					_altNames[parts[0]] = nameBuilder.ToString();
 				}
 			}
+		}
+
+		private void OnSettingValueChanged(object sender, PropertyChangedEventArgs e)
+		{
+			if (e.PropertyName == "UrgentVolume")
+			{
+				PlayUrgentNotification();
+			}
+			else if (e.PropertyName == "Volume")
+			{
+				PlayNormalNotification();
+			}
+			SaveSettings();
 		}
 
 		#endregion
@@ -393,7 +483,15 @@ namespace TwitterNotifier
 			{
 				if (_settings != value)
 				{
+					if (_settings != null)
+					{
+						_settings.PropertyChanged -= OnSettingValueChanged;
+					}
 					_settings = value;
+					if (_settings != null)
+					{
+						_settings.PropertyChanged += OnSettingValueChanged;
+					}
 					OnPropertyChanged("Settings");
 				}
 			}

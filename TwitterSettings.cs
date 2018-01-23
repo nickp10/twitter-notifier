@@ -6,6 +6,34 @@ namespace TwitterNotifier
 	{
 		#region Properties
 
+		private string _authKey;
+		public string AuthKey
+		{
+			get { return _authKey; }
+			set
+			{
+				if (_authKey != value)
+				{
+					_authKey = value;
+					OnPropertyChanged("AuthKey");
+				}
+			}
+		}
+
+		private string _authSecret;
+		public string AuthSecret
+		{
+			get { return _authSecret; }
+			set
+			{
+				if (_authSecret != value)
+				{
+					_authSecret = value;
+					OnPropertyChanged("AuthSecret");
+				}
+			}
+		}
+
 		private double _fontSize = 18;
 		public double FontSize
 		{
@@ -16,6 +44,62 @@ namespace TwitterNotifier
 				{
 					_fontSize = value;
 					OnPropertyChanged("FontSize");
+				}
+			}
+		}
+
+		private bool _ignoreRetweets = true;
+		public bool IgnoreRetweets
+		{
+			get { return _ignoreRetweets; }
+			set
+			{
+				if (_ignoreRetweets != value)
+				{
+					_ignoreRetweets = value;
+					OnPropertyChanged("IgnoreRetweets");
+				}
+			}
+		}
+
+		private bool _ignoreReplyTos = true;
+		public bool IgnoreReplyTos
+		{
+			get { return _ignoreReplyTos; }
+			set
+			{
+				if (_ignoreReplyTos != value)
+				{
+					_ignoreReplyTos = value;
+					OnPropertyChanged("IgnoreReplyTos");
+				}
+			}
+		}
+
+		private bool _rememberMe = true;
+		public bool RememberMe
+		{
+			get { return _rememberMe; }
+			set
+			{
+				if (_rememberMe != value)
+				{
+					_rememberMe = value;
+					OnPropertyChanged("RememberMe");
+				}
+			}
+		}
+
+		private double _urgentVolume = 1;
+		public double UrgentVolume
+		{
+			get { return _urgentVolume; }
+			set
+			{
+				if (_urgentVolume != value)
+				{
+					_urgentVolume = value;
+					OnPropertyChanged("UrgentVolume");
 				}
 			}
 		}

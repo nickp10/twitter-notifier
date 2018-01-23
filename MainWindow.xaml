@@ -27,22 +27,30 @@
 			   Placement="Bottom"
 			   StaysOpen="False"
 			   AllowsTransparency="True"
-			   HorizontalOffset="-262"
+			   HorizontalOffset="-312"
 			   IsOpen="{Binding ElementName=SettingsButton, Path=IsChecked}">
 			<Border BorderThickness="2"
 					BorderBrush="Black"
 					CornerRadius="2"
 					Background="White"
 					Padding="10"
-					Width="300">
+					Width="350">
 				<Grid>
 					<Grid.RowDefinitions>
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="10" />
 						<RowDefinition Height="Auto" />
+						<RowDefinition Height="10" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="10" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="10" />
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="10" />
+						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 					<Grid.ColumnDefinitions>
-						<ColumnDefinition Width="120" />
+						<ColumnDefinition Width="200" />
 						<ColumnDefinition Width="10" />
 						<ColumnDefinition Width="*" />
 					</Grid.ColumnDefinitions>
@@ -56,12 +64,11 @@
 							Minimum="8"
 							Maximum="24"
 							Value="{Binding Settings.FontSize}"
-							Thumb.DragCompleted="OnFontSizeValueChanged"
 							VerticalAlignment="Center"
 							x:Name="FontSizeSlider" />
 					<Label Grid.Row="2"
 						   Grid.Column="0"
-						   Content="Volume:"
+						   Content="Volume (Normal):"
 						   Target="{Binding ElementName=VolumeSlider}"
 						   VerticalAlignment="Center" />
 					<Slider Grid.Row="2"
@@ -69,9 +76,47 @@
 							Minimum="0"
 							Maximum="1"
 							Value="{Binding Settings.Volume}"
-							Thumb.DragCompleted="OnVolumeValueChanged"
 							VerticalAlignment="Center"
 							x:Name="VolumeSlider" />
+					<Label Grid.Row="4"
+						   Grid.Column="0"
+						   Content="Volume (Urgent):"
+						   Target="{Binding ElementName=UrgentVolumeSlider}"
+						   VerticalAlignment="Center" />
+					<Slider Grid.Row="4"
+							Grid.Column="2"
+							Minimum="0"
+							Maximum="1"
+							Value="{Binding Settings.UrgentVolume}"
+							VerticalAlignment="Center"
+							x:Name="UrgentVolumeSlider" />
+					<Label Grid.Row="6"
+						   Grid.Column="0"
+						   Content="Ignore Retweets:"
+						   Target="{Binding ElementName=IgnoreRetweetsCheckbox}"
+						   VerticalAlignment="Center" />
+					<CheckBox Grid.Row="6"
+							  Grid.Column="2"
+							  IsChecked="{Binding Settings.IgnoreReplyTos}"
+							  VerticalAlignment="Center"
+							  x:Name="IgnoreReplyTosCheckbox" />
+					<Label Grid.Row="8"
+						   Grid.Column="0"
+						   Content="Ignore Reply To's:"
+						   Target="{Binding ElementName=IgnoreReplyTosCheckbox}"
+						   VerticalAlignment="Center" />
+					<CheckBox Grid.Row="8"
+							  Grid.Column="2"
+							  IsChecked="{Binding Settings.IgnoreRetweets}"
+							  VerticalAlignment="Center"
+							  x:Name="IgnoreRetweetsCheckbox" />
+					<Button Grid.Row="10"
+							Grid.ColumnSpan="3"
+							Content="Logout"
+							Click="OnLogoutClick"
+							Cursor="Hand"
+							HorizontalAlignment="Center"
+							Padding="10,5" />
 				</Grid>
 			</Border>
 		</Popup>
@@ -84,6 +129,8 @@
 				<ColumnDefinition Width="*" />
 			</Grid.ColumnDefinitions>
 			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="10" />
 				<RowDefinition Height="Auto" />
 				<RowDefinition Height="10" />
 				<RowDefinition Height="Auto" />
@@ -106,7 +153,14 @@
 					 Text="{Binding AuthorizationCaptcha}"
 					 VerticalAlignment="Center"
 					 x:Name="CaptchaTextBox" />
-			<Button Grid.Row="4"
+			<CheckBox Grid.Row="4"
+					  Grid.ColumnSpan="3"
+					  HorizontalAlignment="Center"
+					  VerticalAlignment="Center"
+					  VerticalContentAlignment="Center"
+					  IsChecked="{Binding Settings.RememberMe}"
+					  Content="Remember Me" />
+			<Button Grid.Row="6"
 					Grid.ColumnSpan="3"
 					IsEnabled="{Binding IsNotAuthorizing}"
 					Content="Login"
