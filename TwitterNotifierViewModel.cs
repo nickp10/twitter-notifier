@@ -27,7 +27,7 @@ namespace TwitterNotifier
 		private string _settingsPath, _namesPath;
 		private readonly string[] _urgentHandles;
 		private readonly byte[] _normalNotification, _urgentNotification;
-		private readonly IDictionary<string, string> _altNames = new Dictionary<string, string>();
+		private readonly IDictionary<string, string> _altNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 
 		#endregion
 
