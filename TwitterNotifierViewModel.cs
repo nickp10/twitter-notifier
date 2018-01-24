@@ -134,7 +134,7 @@ namespace TwitterNotifier
 
 		private bool IsUrgent(ITweet tweet)
 		{
-			return _urgentHandles.Contains(tweet.CreatedBy.ScreenName);
+			return _urgentHandles.Any(h => string.Equals(h, tweet.CreatedBy.ScreenName, StringComparison.OrdinalIgnoreCase));
 		}
 
 		private void SubscribeToUserStream(ITwitterCredentials credentials)
