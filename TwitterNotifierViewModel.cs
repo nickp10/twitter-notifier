@@ -28,6 +28,7 @@ namespace TwitterNotifier
 		private readonly string[] _urgentHandles;
 		private readonly byte[] _normalNotification, _urgentNotification;
 		private readonly IDictionary<string, string> _altNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+		private readonly ISet<string> _hiddenNames = new HashSet<string>();
 
 		#endregion
 
@@ -126,6 +127,10 @@ namespace TwitterNotifier
 				return false;
 			}
 			if (Settings.IgnoreReplyTos && !string.IsNullOrEmpty(tweet.InReplyToScreenName))
+			{
+				return false;
+			}
+			if (_hiddenNames.Contains(tweet.CreatedBy.ScreenName))
 			{
 				return false;
 			}
@@ -261,6 +266,10 @@ namespace TwitterNotifier
 						nameBuilder.Append("\">");
 						nameBuilder.Append(parts[3]);
 						nameBuilder.Append("</a>");
+					}
+					if (parts.Length >= 6 && string.Equals(parts[5], "n", StringComparison.OrdinalIgnoreCase))
+					{
+						_hiddenNames.Add(parts[0]);
 					}
 					_altNames[parts[0]] = nameBuilder.ToString();
 				}
