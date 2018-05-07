@@ -1,4 +1,9 @@
-﻿using System.ComponentModel;
+﻿using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Windows;
+using System.Windows.Data;
+using Newtonsoft.Json;
 
 namespace TwitterNotifier
 {
@@ -73,6 +78,29 @@ namespace TwitterNotifier
 					_ignoreReplyTos = value;
 					OnPropertyChanged("IgnoreReplyTos");
 				}
+			}
+		}
+
+		private readonly ObservableCollection<string> _keywords = new ObservableCollection<string>();
+		public ObservableCollection<string> Keywords
+		{
+			get { return _keywords; }
+		}
+
+		private ListCollectionView _keywordsView;
+		[JsonIgnore]
+		public ListCollectionView KeywordsView
+		{
+			get
+			{
+				if (_keywordsView == null)
+				{
+					Application.Current.Dispatcher.Invoke(new Action(() =>
+					{
+						_keywordsView = new ListCollectionView(Keywords);
+					}));
+				}
+				return _keywordsView;
 			}
 		}
 

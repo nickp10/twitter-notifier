@@ -12,6 +12,37 @@ namespace TwitterNotifier
 			DataContext = new TwitterNotifierViewModel();
 		}
 
+		private void OnAddKeywordClick(object sender, RoutedEventArgs e)
+		{
+			var vm = DataContext as TwitterNotifierViewModel;
+			if (vm != null)
+			{
+				var keyword = KeywordTextBox.Text;
+				if (!string.IsNullOrWhiteSpace(keyword))
+				{
+					vm.Settings.Keywords.Add(keyword);
+				}
+				KeywordTextBox.Text = string.Empty;
+				KeywordTextBox.Focus();
+			}
+		}
+
+		private void OnRemoveKeywordClick(object sender, RoutedEventArgs e)
+		{
+			var vm = DataContext as TwitterNotifierViewModel;
+			if (vm != null)
+			{
+				var keyword = vm.Settings.KeywordsView.CurrentItem;
+				if (keyword != null && keyword is string)
+				{
+					if (vm.Settings.Keywords.Remove((string)keyword))
+					{
+						vm.Settings.KeywordsView.MoveCurrentToFirst();
+					}
+				}
+			}
+		}
+
 		private void OnLoginClick(object sender, RoutedEventArgs e)
 		{
 			var vm = DataContext as TwitterNotifierViewModel;

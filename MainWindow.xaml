@@ -27,16 +27,18 @@
 			   Placement="Bottom"
 			   StaysOpen="False"
 			   AllowsTransparency="True"
-			   HorizontalOffset="-312"
+			   HorizontalOffset="-362"
 			   IsOpen="{Binding ElementName=SettingsButton, Path=IsChecked}">
 			<Border BorderThickness="2"
 					BorderBrush="Black"
 					CornerRadius="2"
 					Background="White"
 					Padding="10"
-					Width="350">
+					Width="400">
 				<Grid>
 					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="10" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="10" />
 						<RowDefinition Height="Auto" />
@@ -110,7 +112,42 @@
 							  IsChecked="{Binding Settings.IgnoreRetweets}"
 							  VerticalAlignment="Center"
 							  x:Name="IgnoreRetweetsCheckbox" />
-					<Button Grid.Row="10"
+					<Label Grid.Row="10"
+						   Grid.Column="0"
+						   Content="Keywords:"
+						   Target="{Binding ElementName=KeywordTextBox}"
+						   VerticalAlignment="Center" />
+					<Grid Grid.Row="10"
+						  Grid.Column="2">
+						<Grid.RowDefinitions>
+							<RowDefinition Height="100" />
+							<RowDefinition Height="10" />
+							<RowDefinition Height="Auto" />
+							<RowDefinition Height="10" />
+							<RowDefinition Height="Auto" />
+						</Grid.RowDefinitions>
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="10" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+						<ListBox Grid.Row="0"
+								 Grid.ColumnSpan="3"
+								 ItemsSource="{Binding Settings.KeywordsView}"
+								 IsSynchronizedWithCurrentItem="True" />
+						<Button Grid.Row="2"
+								Grid.ColumnSpan="3"
+								Click="OnRemoveKeywordClick"
+								Content="Remove" />
+						<TextBox Grid.Row="4"
+								 Grid.Column="0"
+								 x:Name="KeywordTextBox" />
+						<Button Grid.Row="4"
+								Grid.Column="2"
+								Click="OnAddKeywordClick"
+								Content="Add" />
+					</Grid>
+					<Button Grid.Row="12"
 							Grid.ColumnSpan="3"
 							Content="Logout"
 							Click="OnLogoutClick"

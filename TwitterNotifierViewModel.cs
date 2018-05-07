@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Collections.Specialized;
 using System.ComponentModel;
 using System.IO;
 using System.Linq;
@@ -289,6 +290,11 @@ namespace TwitterNotifier
 			SaveSettings();
 		}
 
+		private void OnSettingValueCollectionChanged(object sender, NotifyCollectionChangedEventArgs e)
+		{
+			SaveSettings();
+		}
+
 		#endregion
 
 		#region Format Methods
@@ -495,11 +501,13 @@ namespace TwitterNotifier
 					if (_settings != null)
 					{
 						_settings.PropertyChanged -= OnSettingValueChanged;
+						_settings.Keywords.CollectionChanged -= OnSettingValueCollectionChanged;
 					}
 					_settings = value;
 					if (_settings != null)
 					{
 						_settings.PropertyChanged += OnSettingValueChanged;
+						_settings.Keywords.CollectionChanged += OnSettingValueCollectionChanged;
 					}
 					OnPropertyChanged("Settings");
 				}
