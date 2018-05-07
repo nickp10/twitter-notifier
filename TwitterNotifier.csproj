@@ -150,6 +150,9 @@
     <Resource Include="settings.png" />
   </ItemGroup>
   <ItemGroup>
+    <Content Include="Configuration\keywordNotification.wav">
+      <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </Content>
     <Content Include="Configuration\notification.wav">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </Content>

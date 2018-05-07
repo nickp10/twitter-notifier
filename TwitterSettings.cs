@@ -104,6 +104,20 @@ namespace TwitterNotifier
 			}
 		}
 
+		private double _keywordVolume = 1;
+		public double KeywordVolume
+		{
+			get { return _keywordVolume; }
+			set
+			{
+				if (_keywordVolume != value)
+				{
+					_keywordVolume = value;
+					OnPropertyChanged("KeywordVolume");
+				}
+			}
+		}
+
 		private bool _rememberMe = true;
 		public bool RememberMe
 		{

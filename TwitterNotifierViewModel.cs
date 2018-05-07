@@ -27,7 +27,7 @@ namespace TwitterNotifier
 		private IAuthenticationContext _authorizationContext;
 		private string _settingsPath, _namesPath;
 		private readonly string[] _urgentHandles;
-		private readonly byte[] _normalNotification, _urgentNotification;
+		private readonly byte[] _normalNotification, _keywordNotification, _urgentNotification;
 		private readonly IDictionary<string, string> _altNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		private readonly ISet<string> _hiddenNames = new HashSet<string>();
 
@@ -43,6 +43,7 @@ namespace TwitterNotifier
 			_settingsPath = Path.Combine(appDataBasePath, "settings.json");
 			_namesPath = Path.Combine(configBasePath, "twitterNames.csv");
 			_normalNotification = File.ReadAllBytes(Path.Combine(configBasePath, "notification.wav"));
+			_keywordNotification = File.ReadAllBytes(Path.Combine(configBasePath, "keywordNotification.wav"));
 			_urgentNotification = File.ReadAllBytes(Path.Combine(configBasePath, "urgentNotification.wav"));
 			_urgentHandles = File.ReadAllLines(Path.Combine(configBasePath, "urgentHandles.txt"));
 			Directory.CreateDirectory(appDataBasePath);
@@ -143,6 +144,18 @@ namespace TwitterNotifier
 			return _urgentHandles.Any(h => string.Equals(h, tweet.CreatedBy.ScreenName, StringComparison.OrdinalIgnoreCase));
 		}
 
+		private bool TweetContainsKeyword(ITweet tweet)
+		{
+			foreach (var keyword in Settings.Keywords)
+			{
+				if (tweet.FullText.IndexOf(keyword, StringComparison.OrdinalIgnoreCase) >= 0)
+				{
+					return true;
+				}
+			}
+			return false;
+		}
+
 		private void SubscribeToUserStream(ITwitterCredentials credentials)
 		{
 			var stream = Tweetinvi.Stream.CreateUserStream(credentials);
@@ -174,6 +187,10 @@ namespace TwitterNotifier
 						{
 							PlayUrgentNotification();
 						}
+						else if (TweetContainsKeyword(e.Tweet))
+						{
+							PlayKeywordNotification();
+						}
 						else
 						{
 							PlayNormalNotification();
@@ -192,6 +209,11 @@ namespace TwitterNotifier
 		public void PlayNormalNotification()
 		{
 			PlaySound(_normalNotification, Settings.Volume);
+		}
+
+		public void PlayKeywordNotification()
+		{
+			PlaySound(_keywordNotification, Settings.KeywordVolume);
 		}
 
 		public void PlayUrgentNotification()
@@ -282,6 +304,10 @@ namespace TwitterNotifier
 			if (e.PropertyName == "UrgentVolume")
 			{
 				PlayUrgentNotification();
+			}
+			else if (e.PropertyName == "KeywordVolume")
+			{
+				PlayKeywordNotification();
 			}
 			else if (e.PropertyName == "Volume")
 			{
