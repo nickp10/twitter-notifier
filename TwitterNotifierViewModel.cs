@@ -183,13 +183,13 @@ namespace TwitterNotifier
 				{
 					if (Filter(e.Tweet))
 					{
-						if (IsUrgent(e.Tweet))
-						{
-							PlayUrgentNotification();
-						}
-						else if (TweetContainsKeyword(e.Tweet))
+						if (TweetContainsKeyword(e.Tweet))
 						{
 							PlayKeywordNotification();
+						}
+						else if (IsUrgent(e.Tweet))
+						{
+							PlayUrgentNotification();
 						}
 						else
 						{
