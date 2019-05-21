@@ -158,49 +158,66 @@ namespace TwitterNotifier
 
 		private void SubscribeToUserStream(ITwitterCredentials credentials)
 		{
-			var stream = Tweetinvi.Stream.CreateUserStream(credentials);
-			stream.StreamStarted += (s, e) =>
+			Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
 			{
-				Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+				Auth.SetCredentials(credentials);
+				var seenTweets = new List<string>();
+				foreach (var tweet in Timeline.GetHomeTimeline())
 				{
-					Auth.SetCredentials(credentials);
-					foreach (var tweet in Timeline.GetHomeTimeline())
+					seenTweets.Add(tweet.IdStr);
+					if (Filter(tweet))
 					{
-						if (Filter(tweet))
-						{
-							Tweets.Add(tweet);
-						}
+						Tweets.Add(tweet);
 					}
+				}
+				TweetsHTML = BuildHTML();
+
+				StartPolling(seenTweets);
+			}));
+			IsLoginScreen = false;
+			IsTweetScreen = true;
+			IsNotAuthorizing = true;
+		}
+
+		private void StartPolling(List<string> seenTweets)
+		{
+			var polling = new System.Timers.Timer(5000);
+			polling.Elapsed += (s, e) =>
+			{
+				foreach (var tweet in Timeline.GetHomeTimeline())
+				{
+					if (!seenTweets.Contains(tweet.IdStr))
+					{
+						seenTweets.Add(tweet.IdStr);
+						NewTweet(tweet);
+					}
+				}
+			};
+			polling.Start();
+		}
+
+		private void NewTweet(ITweet tweet)
+		{
+			Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+			{
+				if (Filter(tweet))
+				{
+					if (TweetContainsKeyword(tweet))
+					{
+						PlayKeywordNotification();
+					}
+					else if (IsUrgent(tweet))
+					{
+						PlayUrgentNotification();
+					}
+					else
+					{
+						PlayNormalNotification();
+					}
+					Tweets.Insert(0, tweet);
 					TweetsHTML = BuildHTML();
-				}));
-				IsLoginScreen = false;
-				IsTweetScreen = true;
-				IsNotAuthorizing = true;
-			};
-			stream.TweetCreatedByAnyone += (s, e) =>
-			{
-				Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
-				{
-					if (Filter(e.Tweet))
-					{
-						if (TweetContainsKeyword(e.Tweet))
-						{
-							PlayKeywordNotification();
-						}
-						else if (IsUrgent(e.Tweet))
-						{
-							PlayUrgentNotification();
-						}
-						else
-						{
-							PlayNormalNotification();
-						}
-						Tweets.Insert(0, e.Tweet);
-						TweetsHTML = BuildHTML();
-					}
-				}));
-			};
-			stream.StartStream();
+				}
+			}));
 		}
 
 		[DllImport("Winmm.dll")]
