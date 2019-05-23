@@ -162,12 +162,16 @@ namespace TwitterNotifier
 			{
 				Auth.SetCredentials(credentials);
 				var seenTweets = new List<string>();
-				foreach (var tweet in Timeline.GetHomeTimeline())
+				var tweets = Timeline.GetHomeTimeline();
+				if (tweets != null)
 				{
-					seenTweets.Add(tweet.IdStr);
-					if (Filter(tweet))
+					foreach (var tweet in tweets)
 					{
-						Tweets.Add(tweet);
+						seenTweets.Add(tweet.IdStr);
+						if (Filter(tweet))
+						{
+							Tweets.Add(tweet);
+						}
 					}
 				}
 				TweetsHTML = BuildHTML();
@@ -184,40 +188,44 @@ namespace TwitterNotifier
 			var polling = new System.Timers.Timer(5000);
 			polling.Elapsed += (s, e) =>
 			{
-				foreach (var tweet in Timeline.GetHomeTimeline())
+				Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
 				{
-					if (!seenTweets.Contains(tweet.IdStr))
+					var tweets = Timeline.GetHomeTimeline();
+					if (tweets != null)
 					{
-						seenTweets.Add(tweet.IdStr);
-						NewTweet(tweet);
+						foreach (var tweet in tweets)
+						{
+							if (!seenTweets.Contains(tweet.IdStr))
+							{
+								seenTweets.Add(tweet.IdStr);
+								NewTweet(tweet);
+							}
+						}
 					}
-				}
+				}));
 			};
 			polling.Start();
 		}
 
 		private void NewTweet(ITweet tweet)
 		{
-			Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+			if (Filter(tweet))
 			{
-				if (Filter(tweet))
+				if (TweetContainsKeyword(tweet))
 				{
-					if (TweetContainsKeyword(tweet))
-					{
-						PlayKeywordNotification();
-					}
-					else if (IsUrgent(tweet))
-					{
-						PlayUrgentNotification();
-					}
-					else
-					{
-						PlayNormalNotification();
-					}
-					Tweets.Insert(0, tweet);
-					TweetsHTML = BuildHTML();
+					PlayKeywordNotification();
 				}
-			}));
+				else if (IsUrgent(tweet))
+				{
+					PlayUrgentNotification();
+				}
+				else
+				{
+					PlayNormalNotification();
+				}
+				Tweets.Insert(0, tweet);
+				TweetsHTML = BuildHTML();
+			}
 		}
 
 		[DllImport("Winmm.dll")]
