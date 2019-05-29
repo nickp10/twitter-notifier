@@ -13,7 +13,8 @@ using System.Windows;
 using System.Windows.Threading;
 using NAudio.Wave;
 using Newtonsoft.Json;
-using TweetSharp;
+using Tweetinvi;
+using Tweetinvi.Models;
 
 namespace TwitterNotifier
 {
@@ -23,8 +24,7 @@ namespace TwitterNotifier
 
 		public const string TWITTER_API_KEY = "QAqEo4of92uePdh511aL3hLKP";
 		public const string TWITTER_API_SECRET = "nqRY6bpihJiVvwNEz4xfITJf2QAAszoZsDftwzz4kAyJePPh24";
-		private TwitterService _twitterService;
-		private OAuthRequestToken _authorizationToken;
+		private IAuthenticationContext _authorizationContext;
 		private string _settingsPath, _namesPath;
 		private readonly string[] _urgentHandles;
 		private readonly byte[] _normalNotification, _keywordNotification, _urgentNotification;
@@ -61,9 +61,8 @@ namespace TwitterNotifier
 				ReadAltNames();
 				if (!string.IsNullOrEmpty(Settings.AuthKey) && !string.IsNullOrEmpty(Settings.AuthSecret))
 				{
-					_twitterService = new TwitterService(TWITTER_API_KEY, TWITTER_API_SECRET);
-					_twitterService.AuthenticateWith(Settings.AuthKey, Settings.AuthSecret);
-					SubscribeToUserStream();
+					var credentials = new TwitterCredentials(TWITTER_API_KEY, TWITTER_API_SECRET, Settings.AuthKey, Settings.AuthSecret);
+					ShowHomeTimeline(credentials);
 				}
 				else
 				{
@@ -80,9 +79,9 @@ namespace TwitterNotifier
 		{
 			IsLoginScreen = true;
 			IsTweetScreen = false;
-			_twitterService = new TwitterService(TWITTER_API_KEY, TWITTER_API_SECRET);
-			_authorizationToken = _twitterService.GetRequestToken();
-			AuthorizationURL = _twitterService.GetAuthorizationUri(_authorizationToken).AbsoluteUri;
+			var applicationCredentials = new ConsumerCredentials(TWITTER_API_KEY, TWITTER_API_SECRET);
+			_authorizationContext = AuthFlow.InitAuthentication(applicationCredentials);
+			AuthorizationURL = _authorizationContext.AuthorizationURL;
 		}
 
 		public void Logout()
@@ -100,20 +99,19 @@ namespace TwitterNotifier
 			{
 				try
 				{
-					var access = _twitterService.GetAccessToken(_authorizationToken, AuthorizationCaptcha);
-					_twitterService.AuthenticateWith(access.Token, access.TokenSecret);
+					var credentials = AuthFlow.CreateCredentialsFromVerifierCode(AuthorizationCaptcha, _authorizationContext);
 					AuthorizationCaptcha = null;
 					if (Settings.RememberMe)
 					{
-						Settings.AuthKey = access.Token;
-						Settings.AuthSecret = access.TokenSecret;
+						Settings.AuthKey = credentials.AccessToken;
+						Settings.AuthSecret = credentials.AccessTokenSecret;
 					}
 					else
 					{
 						Settings.AuthKey = null;
 						Settings.AuthSecret = null;
 					}
-					SubscribeToUserStream();
+					ShowHomeTimeline(credentials);
 				}
 				catch
 				{
@@ -124,9 +122,9 @@ namespace TwitterNotifier
 			});
 		}
 
-		private bool Filter(TwitterStatus tweet)
+		private bool Filter(ITweet tweet)
 		{
-			if (Settings.IgnoreRetweets && tweet.RetweetedStatus != null)
+			if (Settings.IgnoreRetweets && tweet.IsRetweet)
 			{
 				return false;
 			}
@@ -134,19 +132,19 @@ namespace TwitterNotifier
 			{
 				return false;
 			}
-			if (_hiddenNames.Contains(tweet.Author.ScreenName))
+			if (_hiddenNames.Contains(tweet.CreatedBy.ScreenName))
 			{
 				return false;
 			}
 			return true;
 		}
 
-		private bool IsUrgent(TwitterStatus tweet)
+		private bool IsUrgent(ITweet tweet)
 		{
-			return _urgentHandles.Any(h => string.Equals(h, tweet.Author.ScreenName, StringComparison.OrdinalIgnoreCase));
+			return _urgentHandles.Any(h => string.Equals(h, tweet.CreatedBy.ScreenName, StringComparison.OrdinalIgnoreCase));
 		}
 
-		private bool TweetContainsKeyword(TwitterStatus tweet)
+		private bool TweetContainsKeyword(ITweet tweet)
 		{
 			foreach (var keyword in Settings.Keywords)
 			{
@@ -158,57 +156,57 @@ namespace TwitterNotifier
 			return false;
 		}
 
-		private void SubscribeToUserStream()
+		private void ShowHomeTimeline(ITwitterCredentials credentials)
 		{
-			Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+			try
 			{
-				var seenTweets = new List<string>();
-				var tweets = _twitterService.ListTweetsOnHomeTimeline(new ListTweetsOnHomeTimelineOptions());
-				if (tweets != null)
+				Auth.SetCredentials(credentials);
+				var timeline = Timeline.GetHomeTimeline();
+				if (timeline != null)
 				{
-					foreach (var tweet in tweets)
+					Application.Current.Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
 					{
-						seenTweets.Add(tweet.IdStr);
-						if (Filter(tweet))
+						foreach (var tweet in timeline)
 						{
-							Tweets.Add(tweet);
+							if (Filter(tweet))
+							{
+								Tweets.Add(tweet);
+							}
 						}
-					}
+						TweetsHTML = BuildHTML();
+					}));
 				}
-				TweetsHTML = BuildHTML();
-
-				StartPolling(seenTweets);
-			}));
-			IsLoginScreen = false;
-			IsTweetScreen = true;
-			IsNotAuthorizing = true;
+				SubscribeToFilterStream(credentials);
+			}
+			finally
+			{
+				IsLoginScreen = false;
+				IsTweetScreen = true;
+				IsNotAuthorizing = true;
+			}
 		}
 
-		private void StartPolling(List<string> seenTweets)
+		private void SubscribeToFilterStream(ITwitterCredentials credentials)
 		{
-			var polling = new System.Timers.Timer(5000);
-			polling.Elapsed += (s, e) =>
+			var stream = Tweetinvi.Stream.CreateFilteredStream(credentials);
+			var user = User.GetAuthenticatedUser(credentials);
+			var following = User.GetFriendIds(user) ?? Enumerable.Empty<long>();
+			foreach (var id in following)
+			{
+				stream.AddFollow(id);
+			}
+			stream.AddFollow(user);
+			stream.MatchingTweetReceived += (s, e) =>
 			{
 				Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
 				{
-					var tweets = _twitterService.ListTweetsOnHomeTimeline(new ListTweetsOnHomeTimelineOptions());
-					if (tweets != null)
-					{
-						foreach (var tweet in tweets)
-						{
-							if (!seenTweets.Contains(tweet.IdStr))
-							{
-								seenTweets.Add(tweet.IdStr);
-								NewTweet(tweet);
-							}
-						}
-					}
+					NewTweet(e.Tweet);
 				}));
 			};
-			polling.Start();
+			stream.StartStreamMatchingAllConditionsAsync();
 		}
 
-		private void NewTweet(TwitterStatus tweet)
+		private void NewTweet(ITweet tweet)
 		{
 			if (Filter(tweet))
 			{
@@ -269,15 +267,15 @@ namespace TwitterNotifier
 			{
 				builder.Append("<div style=\"background-color: #FFFFFF; padding: 5px; margin-top: 10px; margin-left: 5px; margin-right: 5px; margin-bottom: 10px;\">");
 				builder.Append("<b>");
-				builder.Append(FormatName(tweet.Author.ScreenName, (tweet.Author is TwitterUser user) ? user.Name : tweet.Author.ScreenName));
+				builder.Append(FormatName(tweet.CreatedBy.ScreenName, tweet.CreatedBy.Name));
 				builder.Append("</b> <a href=\"https://twitter.com/");
-				builder.Append(tweet.Author.ScreenName);
+				builder.Append(tweet.CreatedBy.ScreenName);
 				builder.Append("\" style=\"color: #657786\">@");
-				builder.Append(tweet.Author.ScreenName);
+				builder.Append(tweet.CreatedBy.ScreenName);
 				builder.Append("</a> - ");
-				builder.Append(string.Format("{0:MM/dd/yy hh:mm:ss tt}", tweet.CreatedDate));
+				builder.Append(string.Format("{0:MM/dd/yy hh:mm:ss tt}", tweet.CreatedAt.ToLocalTime()));
 				builder.Append("<br />");
-				builder.Append(FormatText(tweet.Text));
+				builder.Append(FormatText(tweet.FullText));
 				builder.Append("</div>");
 			}
 			return builder.ToString();
@@ -580,8 +578,8 @@ namespace TwitterNotifier
 			}
 		}
 
-		private readonly ObservableCollection<TwitterStatus> _tweets = new ObservableCollection<TwitterStatus>();
-		public ObservableCollection<TwitterStatus> Tweets
+		private readonly ObservableCollection<ITweet> _tweets = new ObservableCollection<ITweet>();
+		public ObservableCollection<ITweet> Tweets
 		{
 			get { return _tweets; }
 		}
