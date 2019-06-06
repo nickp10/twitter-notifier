@@ -306,17 +306,20 @@ namespace TwitterNotifier
 						nameBuilder.Append(parts[2]);
 						nameBuilder.Append(")");
 					}
-					if (parts.Length >= 5 && !string.IsNullOrWhiteSpace(parts[3]) && !string.IsNullOrWhiteSpace(parts[4]))
-					{
-						nameBuilder.Append(" <a href=\"");
-						nameBuilder.Append(parts[4]);
-						nameBuilder.Append("\">");
-						nameBuilder.Append(parts[3]);
-						nameBuilder.Append("</a>");
-					}
-					if (parts.Length >= 6 && string.Equals(parts[5], "n", StringComparison.OrdinalIgnoreCase))
+					if (parts.Length >= 4 && string.Equals(parts[3], "n", StringComparison.OrdinalIgnoreCase))
 					{
 						_hiddenNames.Add(parts[0]);
+					}
+					for (int x = 4; parts.Length >= x + 2; x += 2)
+					{
+						if (!string.IsNullOrWhiteSpace(parts[x]) && !string.IsNullOrWhiteSpace(parts[x + 1]))
+						{
+							nameBuilder.Append(" <a href=\"");
+							nameBuilder.Append(parts[x + 1]);
+							nameBuilder.Append("\">");
+							nameBuilder.Append(parts[x]);
+							nameBuilder.Append("</a>");
+						}
 					}
 					_altNames[parts[0]] = nameBuilder.ToString();
 				}
