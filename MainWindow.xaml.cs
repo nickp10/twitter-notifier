@@ -52,6 +52,15 @@ namespace TwitterNotifier
 			}
 		}
 
+		private void OnGenerateKeyClick(object sender, RoutedEventArgs e)
+		{
+			var vm = DataContext as TwitterNotifierViewModel;
+			if (vm != null)
+			{
+				vm.GenerateKey();
+			}
+		}
+
 		private void OnLogoutClick(object sender, RoutedEventArgs e)
 		{
 			var vm = DataContext as TwitterNotifierViewModel;

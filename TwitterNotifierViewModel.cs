@@ -135,8 +135,16 @@ namespace TwitterNotifier
 			}
 		}
 
+		public void GenerateKey()
+		{
+			var key = BuildAppKey();
+			Clipboard.SetText(key);
+			MessageBox.Show("An application key has been copied to your clipboard. It is valid for 2 weeks. The generated application key is:\n\n" + key);
+		}
+
 		private void ShowInitialScreen()
 		{
+#if REQ_KEY
 			var appKey = Settings.AppKey;
 			if (!IsKeyValid(appKey))
 			{
@@ -144,7 +152,9 @@ namespace TwitterNotifier
 				IsLoginScreen = false;
 				IsTweetScreen = false;
 			}
-			else if (!string.IsNullOrEmpty(Settings.AuthKey) && !string.IsNullOrEmpty(Settings.AuthSecret))
+			else
+#endif
+			if (!string.IsNullOrEmpty(Settings.AuthKey) && !string.IsNullOrEmpty(Settings.AuthSecret))
 			{
 				var credentials = new TwitterCredentials(TWITTER_API_KEY, TWITTER_API_SECRET, Settings.AuthKey, Settings.AuthSecret);
 				ShowHomeTimeline(credentials);
@@ -636,6 +646,15 @@ namespace TwitterNotifier
 					OnPropertyChanged("AuthorizationURL");
 				}
 			}
+		}
+
+		public bool CanGenerateKey
+		{
+#if REQ_KEY
+			get { return false; }
+#else
+			get { return true; }
+#endif
 		}
 
 		private string _enteredAppKey;

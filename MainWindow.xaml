@@ -172,13 +172,20 @@
 								Click="OnAddKeywordClick"
 								Content="Add" />
 					</Grid>
-					<Button Grid.Row="14"
-							Grid.ColumnSpan="3"
-							Content="Logout"
-							Click="OnLogoutClick"
-							Cursor="Hand"
-							HorizontalAlignment="Center"
-							Padding="10,5" />
+					<WrapPanel Grid.Row="14"
+							   Grid.ColumnSpan="3"
+							   HorizontalAlignment="Center">
+						<Button Content="Generate Key"
+								Click="OnGenerateKeyClick"
+								Cursor="Hand"
+								Visibility="{Binding CanGenerateKey, Converter={StaticResource BooleanToVisibilityConverter}}"
+								Margin="0,0,10,0"
+								Padding="10,5" />
+						<Button Content="Logout"
+								Click="OnLogoutClick"
+								Cursor="Hand"
+								Padding="10,5" />
+					</WrapPanel>
 				</Grid>
 			</Border>
 		</Popup>
