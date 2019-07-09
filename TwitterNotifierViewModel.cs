@@ -58,7 +58,8 @@ namespace TwitterNotifier
 			}
 			ThreadPool.QueueUserWorkItem(q =>
 			{
-				ReadAltNames();
+				ReadAltNames(out var errorMsgs);
+				ErrorMsgs = errorMsgs;
 				if (!string.IsNullOrEmpty(Settings.AuthKey) && !string.IsNullOrEmpty(Settings.AuthSecret))
 				{
 					var credentials = new TwitterCredentials(TWITTER_API_KEY, TWITTER_API_SECRET, Settings.AuthKey, Settings.AuthSecret);
@@ -291,39 +292,94 @@ namespace TwitterNotifier
 			return fallbackName;
 		}
 
-		public void ReadAltNames()
+		public void ReadAltNames(out IEnumerable<string> errors)
 		{
+			var errorMsgs = new List<string>();
+			if (!File.Exists(_namesPath))
+			{
+				errorMsgs.Add("Settings file does not exist: " + _namesPath);
+				errors = errorMsgs;
+				return;
+			}
+			var skipHeader = true;
 			foreach (var line in File.ReadAllLines(_namesPath))
 			{
-				var parts = line.Split(',');
-				if (parts.Length >= 2)
+				if (!string.IsNullOrWhiteSpace(line))
 				{
-					var nameBuilder = new StringBuilder();
-					nameBuilder.Append(parts[1]);
-					if (parts.Length >= 3 && !string.IsNullOrWhiteSpace(parts[2]))
+					if (skipHeader)
 					{
-						nameBuilder.Append(" (");
-						nameBuilder.Append(parts[2]);
-						nameBuilder.Append(")");
+						skipHeader = false;
+						continue;
 					}
-					if (parts.Length >= 4 && string.Equals(parts[3], "n", StringComparison.OrdinalIgnoreCase))
+
+					// Screen Name, Alternate Name 1, Alternate Name 2, Is Visible (Y/N), Hyperlink Display 1, Hyperlink URL 1, Hyperlink Display 2, Hyperlink URL 2, Hyperlink etc.
+					var parts = line.Split(',');
+					if (parts.Length >= 2)
 					{
-						_hiddenNames.Add(parts[0]);
-					}
-					for (int x = 4; parts.Length >= x + 2; x += 2)
-					{
-						if (!string.IsNullOrWhiteSpace(parts[x]) && !string.IsNullOrWhiteSpace(parts[x + 1]))
+						var screenName = parts[0];
+						if (!string.IsNullOrWhiteSpace(screenName))
 						{
-							nameBuilder.Append(" <a href=\"");
-							nameBuilder.Append(parts[x + 1]);
-							nameBuilder.Append("\">");
-							nameBuilder.Append(parts[x]);
-							nameBuilder.Append("</a>");
+							var nameBuilder = new StringBuilder();
+							var alternateName = parts[1];
+							if (!string.IsNullOrWhiteSpace(alternateName))
+							{
+								nameBuilder.Append(alternateName);
+							}
+							if (parts.Length >= 3)
+							{
+								var additionalAlternateName = parts[2];
+								if (!string.IsNullOrWhiteSpace(additionalAlternateName))
+								{
+									if (nameBuilder.Length > 0)
+									{
+										nameBuilder.Append(" (");
+										nameBuilder.Append(additionalAlternateName);
+										nameBuilder.Append(")");
+									}
+									else
+									{
+										nameBuilder.Append(additionalAlternateName);
+									}
+								}
+							}
+							if (parts.Length >= 4)
+							{
+								var isVisible = parts[3];
+								if (!string.IsNullOrWhiteSpace(isVisible) && string.Equals(isVisible, "n", StringComparison.OrdinalIgnoreCase))
+								{
+									_hiddenNames.Add(screenName);
+								}
+							}
+							for (var x = 4; parts.Length >= x + 2; x += 2)
+							{
+								var hyperlinkDisplay = parts[x];
+								var hyperlinkURL = parts[x + 1];
+								if (!string.IsNullOrWhiteSpace(hyperlinkDisplay) && !string.IsNullOrWhiteSpace(hyperlinkURL))
+								{
+									nameBuilder.Append(" <a href=\"");
+									nameBuilder.Append(hyperlinkURL);
+									nameBuilder.Append("\">");
+									nameBuilder.Append(hyperlinkDisplay);
+									nameBuilder.Append("</a>");
+								}
+							}
+							if (nameBuilder.Length > 0)
+							{
+								_altNames[screenName] = nameBuilder.ToString();
+							}
+						}
+						else
+						{
+							errorMsgs.Add("Screen name must be specified for this line: " + line);
 						}
 					}
-					_altNames[parts[0]] = nameBuilder.ToString();
+					else
+					{
+						errorMsgs.Add("Not enough data entered for line: " + line);
+					}
 				}
 			}
+			errors = errorMsgs;
 		}
 
 		private void OnSettingValueChanged(object sender, PropertyChangedEventArgs e)
@@ -497,6 +553,20 @@ namespace TwitterNotifier
 				{
 					_authorizationURL = value;
 					OnPropertyChanged("AuthorizationURL");
+				}
+			}
+		}
+
+		private IEnumerable<string> _errorMsgs;
+		public IEnumerable<string> ErrorMsgs
+		{
+			get { return _errorMsgs; }
+			set
+			{
+				if (_errorMsgs != value)
+				{
+					_errorMsgs = value;
+					OnPropertyChanged(nameof(ErrorMsgs));
 				}
 			}
 		}

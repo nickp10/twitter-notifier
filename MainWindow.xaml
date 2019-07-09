@@ -12,9 +12,19 @@
 		  TextBlock.FontSize="{Binding Settings.FontSize}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
+			<RowDefinition Height="Auto" />
 			<RowDefinition Height="*" />
 		</Grid.RowDefinitions>
-		<ToggleButton Margin="10"
+		<ItemsControl ItemsSource="{Binding ErrorMsgs}">
+			<ItemsControl.ItemTemplate>
+				<DataTemplate>
+					<TextBlock Foreground="Red"
+							   Text="{Binding}" />
+				</DataTemplate>
+			</ItemsControl.ItemTemplate>
+		</ItemsControl>
+		<ToggleButton Grid.Row="1"
+					  Margin="10"
 					  Padding="2"
 					  Cursor="Hand"
 					  HorizontalAlignment="Right"
@@ -171,7 +181,7 @@
 				</Grid>
 			</Border>
 		</Popup>
-		<Grid Grid.Row="1"
+		<Grid Grid.Row="2"
 			  Margin="10"
 			  Visibility="{Binding IsLoginScreen, Converter={StaticResource BooleanToVisibilityConverter}}">
 			<Grid.ColumnDefinitions>
@@ -219,7 +229,7 @@
 					Padding="10,5"
 					HorizontalAlignment="Center" />
 		</Grid>
-		<ScrollViewer Grid.Row="1"
+		<ScrollViewer Grid.Row="2"
 					  Visibility="{Binding IsTweetScreen, Converter={StaticResource BooleanToVisibilityConverter}}"
 					  VerticalScrollBarVisibility="Auto">
 			<RichTextBox BorderThickness="0"
