@@ -60,15 +60,7 @@ namespace TwitterNotifier
 			{
 				ReadAltNames(out var errorMsgs);
 				ErrorMsgs = errorMsgs;
-				if (!string.IsNullOrEmpty(Settings.AuthKey) && !string.IsNullOrEmpty(Settings.AuthSecret))
-				{
-					var credentials = new TwitterCredentials(TWITTER_API_KEY, TWITTER_API_SECRET, Settings.AuthKey, Settings.AuthSecret);
-					ShowHomeTimeline(credentials);
-				}
-				else
-				{
-					InitAuth();
-				}
+				ShowInitialScreen();
 			});
 		}
 
@@ -76,8 +68,96 @@ namespace TwitterNotifier
 
 		#region Methods
 
+		private string Encode(string plainText)
+		{
+			try
+			{
+				var plainTextBytes = Encoding.UTF8.GetBytes(plainText);
+				return Convert.ToBase64String(plainTextBytes);
+			}
+			catch (Exception)
+			{
+				return null;
+			}
+		}
+
+		private string Decode(string base64EncodedText)
+		{
+			try
+			{
+				var base64EncodedBytes = Convert.FromBase64String(base64EncodedText);
+				return Encoding.UTF8.GetString(base64EncodedBytes);
+			}
+			catch (Exception)
+			{
+				return null;
+			}
+		}
+
+		private DateTimeOffset? GetExpiration(string key)
+		{
+			if (!string.IsNullOrWhiteSpace(key))
+			{
+				var decoded = Decode(key);
+				if (!string.IsNullOrWhiteSpace(decoded) && decoded.Length > 24)
+				{
+					if (long.TryParse(decoded.Substring(24), out var millis))
+					{
+						return DateTimeOffset.FromUnixTimeMilliseconds(millis);
+					}
+				}
+			}
+			return null;
+		}
+
+		private bool IsKeyValid(string key)
+		{
+			var expiration = GetExpiration(key);
+			return expiration != null && expiration.Value >= DateTimeOffset.Now;
+		}
+
+		private string BuildAppKey()
+		{
+			return Encode(Guid.NewGuid().ToString().Substring(0, 24) + DateTimeOffset.Now.AddDays(14).ToUnixTimeMilliseconds());
+		}
+
+		public void ValidateAppKey()
+		{
+			var key = EnteredAppKey;
+			if (IsKeyValid(key))
+			{
+				Settings.AppKey = key;
+				ShowInitialScreen();
+			}
+			else
+			{
+				MessageBox.Show("An invalid application key was entered");
+			}
+		}
+
+		private void ShowInitialScreen()
+		{
+			var appKey = Settings.AppKey;
+			if (!IsKeyValid(appKey))
+			{
+				IsAppKeyScreen = true;
+				IsLoginScreen = false;
+				IsTweetScreen = false;
+			}
+			else if (!string.IsNullOrEmpty(Settings.AuthKey) && !string.IsNullOrEmpty(Settings.AuthSecret))
+			{
+				var credentials = new TwitterCredentials(TWITTER_API_KEY, TWITTER_API_SECRET, Settings.AuthKey, Settings.AuthSecret);
+				ShowHomeTimeline(credentials);
+			}
+			else
+			{
+				InitAuth();
+			}
+		}
+
 		public void InitAuth()
 		{
+			IsAppKeyScreen = false;
 			IsLoginScreen = true;
 			IsTweetScreen = false;
 			var applicationCredentials = new ConsumerCredentials(TWITTER_API_KEY, TWITTER_API_SECRET);
@@ -181,6 +261,7 @@ namespace TwitterNotifier
 			}
 			finally
 			{
+				IsAppKeyScreen = false;
 				IsLoginScreen = false;
 				IsTweetScreen = true;
 				IsNotAuthorizing = true;
@@ -557,6 +638,20 @@ namespace TwitterNotifier
 			}
 		}
 
+		private string _enteredAppKey;
+		public string EnteredAppKey
+		{
+			get { return _enteredAppKey; }
+			set
+			{
+				if (_enteredAppKey != value)
+				{
+					_enteredAppKey = value;
+					OnPropertyChanged("EnteredAppKey");
+				}
+			}
+		}
+
 		private IEnumerable<string> _errorMsgs;
 		public IEnumerable<string> ErrorMsgs
 		{
@@ -581,6 +676,20 @@ namespace TwitterNotifier
 				{
 					_isNotAuthorizing = value;
 					OnPropertyChanged("IsNotAuthorizing");
+				}
+			}
+		}
+
+		private bool _isAppKeyScreen;
+		public bool IsAppKeyScreen
+		{
+			get { return _isAppKeyScreen; }
+			set
+			{
+				if (_isAppKeyScreen != value)
+				{
+					_isAppKeyScreen = value;
+					OnPropertyChanged("IsAppKeyScreen");
 				}
 			}
 		}

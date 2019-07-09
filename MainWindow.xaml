@@ -28,6 +28,7 @@
 					  Padding="2"
 					  Cursor="Hand"
 					  HorizontalAlignment="Right"
+					  Visibility="{Binding IsTweetScreen, Converter={StaticResource BooleanToVisibilityConverter}}"
 					  x:Name="SettingsButton">
 			<Image Source="pack://application:,,,/settings.png"
 				   Height="32"
@@ -238,5 +239,35 @@
 						 IsReadOnly="True"
 						 local:RichTextBoxExtensions.Text="{Binding TweetsHTML}" />
 		</ScrollViewer>
+		<Grid Grid.Row="2"
+			  Margin="10"
+			  Visibility="{Binding IsAppKeyScreen, Converter={StaticResource BooleanToVisibilityConverter}}">
+			<Grid.ColumnDefinitions>
+				<ColumnDefinition Width="Auto" />
+				<ColumnDefinition Width="10" />
+				<ColumnDefinition Width="*" />
+			</Grid.ColumnDefinitions>
+			<Grid.RowDefinitions>
+				<RowDefinition Height="Auto" />
+				<RowDefinition Height="10" />
+				<RowDefinition Height="Auto" />
+			</Grid.RowDefinitions>
+			<Label Grid.Row="0"
+				   Grid.Column="0"
+				   Content="Enter an application key:"
+				   Target="{Binding ElementName=AppKeyTextBox}"
+				   VerticalAlignment="Center" />
+			<TextBox Grid.Row="0"
+					 Grid.Column="2"
+					 Text="{Binding EnteredAppKey}"
+					 VerticalAlignment="Center"
+					 x:Name="AppKeyTextBox" />
+			<Button Grid.Row="2"
+					Grid.ColumnSpan="3"
+					Content="Validate Key"
+					Click="OnValidateAppKeyClick"
+					Padding="10,5"
+					HorizontalAlignment="Center" />
+		</Grid>
 	</Grid>
 </Window>

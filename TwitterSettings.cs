@@ -11,6 +11,20 @@ namespace TwitterNotifier
 	{
 		#region Properties
 
+		private string _appKey;
+		public string AppKey
+		{
+			get { return _appKey; }
+			set
+			{
+				if (_appKey != value)
+				{
+					_appKey = value;
+					OnPropertyChanged("AppKey");
+				}
+			}
+		}
+
 		private string _authKey;
 		public string AuthKey
 		{

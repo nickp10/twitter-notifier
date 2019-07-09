@@ -68,5 +68,14 @@ namespace TwitterNotifier
 			Process.Start(new ProcessStartInfo(e.Uri.AbsoluteUri));
 			e.Handled = true;
 		}
+
+		private void OnValidateAppKeyClick(object sender, RoutedEventArgs e)
+		{
+			var vm = DataContext as TwitterNotifierViewModel;
+			if (vm != null)
+			{
+				vm.ValidateAppKey();
+			}
+		}
 	}
 }
