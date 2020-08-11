@@ -38,16 +38,19 @@
 			   Placement="Bottom"
 			   StaysOpen="False"
 			   AllowsTransparency="True"
-			   HorizontalOffset="-362"
-			   IsOpen="{Binding ElementName=SettingsButton, Path=IsChecked}">
+			   HorizontalOffset="-512"
+			   IsOpen="{Binding ElementName=SettingsButton, Path=IsChecked}"
+			   x:Name="SettingsPopup">
 			<Border BorderThickness="2"
 					BorderBrush="Black"
 					CornerRadius="2"
 					Background="White"
 					Padding="10"
-					Width="400">
+					Width="550">
 				<Grid>
 					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="10" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="10" />
 						<RowDefinition Height="Auto" />
@@ -172,7 +175,26 @@
 								Click="OnAddKeywordClick"
 								Content="Add" />
 					</Grid>
-					<WrapPanel Grid.Row="14"
+					<Label Grid.Row="14"
+						   Grid.Column="0"
+						   Content="Output Directory:"
+						   Target="{Binding ElementName=OutputDirectoryTextBox}"
+						   VerticalAlignment="Center" />
+					<Grid Grid.Row="14"
+						  Grid.Column="2">
+						<Grid.ColumnDefinitions>
+							<ColumnDefinition Width="*" />
+							<ColumnDefinition Width="10" />
+							<ColumnDefinition Width="Auto" />
+						</Grid.ColumnDefinitions>
+						<TextBox Grid.Column="0"
+								 Text="{Binding Settings.OutputDirectory}"
+								 x:Name="OutputDirectoryTextBox" />
+						<Button Grid.Column="2"
+								Click="OnBrowseOutputDirectoryClick"
+								Content="Browse" />
+					</Grid>
+					<WrapPanel Grid.Row="16"
 							   Grid.ColumnSpan="3"
 							   HorizontalAlignment="Center">
 						<Button Content="Generate Key"

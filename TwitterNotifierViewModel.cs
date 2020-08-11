@@ -14,6 +14,7 @@ using System.Windows.Threading;
 using NAudio.Wave;
 using Newtonsoft.Json;
 using Tweetinvi;
+using Tweetinvi.Core.Helpers;
 using Tweetinvi.Models;
 
 namespace TwitterNotifier
@@ -316,6 +317,7 @@ namespace TwitterNotifier
 				}
 				Tweets.Insert(0, tweet);
 				TweetsHTML = BuildHTML();
+				WriteTweetFile(tweet);
 			}
 		}
 
@@ -350,6 +352,39 @@ namespace TwitterNotifier
 		{
 			var contents = JsonConvert.SerializeObject(Settings);
 			File.WriteAllText(_settingsPath, contents);
+		}
+
+		private int NextFileNumber(string directory)
+		{
+			int max = 0;
+			foreach (var filename in Directory.GetFiles(directory))
+			{
+				var name = Path.GetFileNameWithoutExtension(filename);
+				if (int.TryParse(name, out var nameInt))
+				{
+					max = Math.Max(nameInt, max);
+				}
+			}
+			return max + 1;
+		}
+
+		private void WriteTweetFile(ITweet tweet)
+		{
+			var directory = Settings.OutputDirectory;
+			if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory))
+			{
+				var number = NextFileNumber(directory);
+				var path = Path.Combine(directory, number + ".txt");
+				var builder = new StringBuilder();
+				builder.Append(FormatName(tweet.CreatedBy.ScreenName, tweet.CreatedBy.Name));
+				builder.Append(" @");
+				builder.Append(tweet.CreatedBy.ScreenName);
+				builder.Append(" - ");
+				builder.Append(string.Format("{0:MM/dd/yy hh:mm:ss tt}", tweet.CreatedAt.ToLocalTime()));
+				builder.AppendLine();
+				builder.Append(new HttpUtility().HtmlDecode(tweet.FullText));
+				File.WriteAllText(path, builder.ToString());
+			}
 		}
 
 		public string BuildHTML()

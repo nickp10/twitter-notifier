@@ -132,6 +132,20 @@ namespace TwitterNotifier
 			}
 		}
 
+		private string _outputDirectory;
+		public string OutputDirectory
+		{
+			get { return _outputDirectory; }
+			set
+			{
+				if (_outputDirectory != value)
+				{
+					_outputDirectory = value;
+					OnPropertyChanged("OutputDirectory");
+				}
+			}
+		}
+
 		private bool _rememberMe = true;
 		public bool RememberMe
 		{

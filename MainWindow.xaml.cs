@@ -1,5 +1,7 @@
 ﻿using System.Diagnostics;
+using System.IO;
 using System.Windows;
+using System.Windows.Forms;
 using System.Windows.Navigation;
 
 namespace TwitterNotifier
@@ -84,6 +86,31 @@ namespace TwitterNotifier
 			if (vm != null)
 			{
 				vm.ValidateAppKey();
+			}
+		}
+
+		private void OnBrowseOutputDirectoryClick(object sender, RoutedEventArgs e)
+		{
+			SettingsPopup.StaysOpen = true;
+			try
+			{
+				var dialog = new FolderBrowserDialog
+				{
+					Description = "Select a directory to store new tweets within",
+					SelectedPath = OutputDirectoryTextBox.Text
+				};
+				if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
+				{
+					var directory = dialog.SelectedPath;
+					if (!string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory))
+					{
+						OutputDirectoryTextBox.Text = directory;
+					}
+				}
+			}
+			finally
+			{
+				SettingsPopup.StaysOpen = false;
 			}
 		}
 	}
