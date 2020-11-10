@@ -1,18 +1,30 @@
 ﻿using System;
-using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
+using NLog;
 
 namespace TwitterNotifier
 {
 	public partial class App : Application
 	{
+		#region Data Members
+
+		private readonly Logger _logger = LogManager.GetCurrentClassLogger();
+
+		#endregion
+
+		#region Overrides
+
 		protected override void OnStartup(StartupEventArgs e)
 		{
 			base.OnStartup(e);
 
 			SetupExceptionHandling();
 		}
+
+		#endregion
+
+		#region Methods
 
 		private void SetupExceptionHandling()
 		{
@@ -28,11 +40,9 @@ namespace TwitterNotifier
 
 		private void LogUnhandledException(Exception exception, string source)
 		{
-			File.AppendAllLines("error.log", new string[]
-			{
-				$"{DateTime.Now.ToString("MM/dd/yyyy @ HH:mm:ss")} - Unhandled exception ({source}) - ({exception.Message})",
-				exception.StackTrace
-			});
+			_logger.Error(exception, source);
 		}
+
+		#endregion
 	}
 }
