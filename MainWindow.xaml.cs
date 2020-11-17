@@ -1,5 +1,6 @@
 ﻿using System.Diagnostics;
 using System.IO;
+using System.Threading;
 using System.Windows;
 using System.Windows.Forms;
 using System.Windows.Navigation;
@@ -68,7 +69,10 @@ namespace TwitterNotifier
 			var vm = DataContext as TwitterNotifierViewModel;
 			if (vm != null)
 			{
-				vm.Logout();
+				ThreadPool.QueueUserWorkItem(async q =>
+				{
+					await vm.Logout();
+				});
 				SettingsButton.IsChecked = false;
 			}
 		}
@@ -85,7 +89,10 @@ namespace TwitterNotifier
 			var vm = DataContext as TwitterNotifierViewModel;
 			if (vm != null)
 			{
-				vm.ValidateAppKey();
+				ThreadPool.QueueUserWorkItem(async q =>
+				{
+					await vm.ValidateAppKey();
+				});
 			}
 		}
 

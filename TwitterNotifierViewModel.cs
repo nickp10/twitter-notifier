@@ -9,10 +9,12 @@ using System.Runtime.InteropServices;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using NAudio.Wave;
 using Newtonsoft.Json;
+using NLog;
 using Tweetinvi;
 using Tweetinvi.Core.Helpers;
 using Tweetinvi.Models;
@@ -25,12 +27,14 @@ namespace TwitterNotifier
 
 		public const string TWITTER_API_KEY = "QAqEo4of92uePdh511aL3hLKP";
 		public const string TWITTER_API_SECRET = "nqRY6bpihJiVvwNEz4xfITJf2QAAszoZsDftwzz4kAyJePPh24";
-		private IAuthenticationContext _authorizationContext;
+		private TwitterClient _applicationClient;
+		private IAuthenticationRequest _authenticationRequest;
 		private string _settingsPath, _namesPath;
 		private readonly string[] _urgentHandles;
 		private readonly byte[] _normalNotification, _keywordNotification, _urgentNotification;
 		private readonly IDictionary<string, string> _altNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
 		private readonly ISet<string> _hiddenNames = new HashSet<string>();
+		private readonly Logger _logger = LogManager.GetCurrentClassLogger();
 
 		#endregion
 
@@ -57,11 +61,11 @@ namespace TwitterNotifier
 			{
 				Settings = new TwitterSettings();
 			}
-			ThreadPool.QueueUserWorkItem(q =>
+			ThreadPool.QueueUserWorkItem(async q =>
 			{
 				ReadAltNames(out var errorMsgs);
 				ErrorMsgs = errorMsgs;
-				ShowInitialScreen();
+				await ShowInitialScreen();
 			});
 		}
 
@@ -122,13 +126,13 @@ namespace TwitterNotifier
 			return Encode(Guid.NewGuid().ToString().Substring(0, 24) + DateTimeOffset.Now.AddDays(14).ToUnixTimeMilliseconds());
 		}
 
-		public void ValidateAppKey()
+		public async Task ValidateAppKey()
 		{
 			var key = EnteredAppKey;
 			if (IsKeyValid(key))
 			{
 				Settings.AppKey = key;
-				ShowInitialScreen();
+				await ShowInitialScreen();
 			}
 			else
 			{
@@ -143,7 +147,7 @@ namespace TwitterNotifier
 			MessageBox.Show("An application key has been copied to your clipboard. It is valid for 2 weeks. The generated application key is:\n\n" + key);
 		}
 
-		private void ShowInitialScreen()
+		private async Task ShowInitialScreen()
 		{
 #if REQ_KEY
 			var appKey = Settings.AppKey;
@@ -158,40 +162,43 @@ namespace TwitterNotifier
 			if (!string.IsNullOrEmpty(Settings.AuthKey) && !string.IsNullOrEmpty(Settings.AuthSecret))
 			{
 				var credentials = new TwitterCredentials(TWITTER_API_KEY, TWITTER_API_SECRET, Settings.AuthKey, Settings.AuthSecret);
-				ShowHomeTimeline(credentials);
+				_applicationClient = new TwitterClient(credentials);
+				await ShowHomeTimeline();
 			}
 			else
 			{
-				InitAuth();
+				await InitAuth();
 			}
 		}
 
-		public void InitAuth()
+		public async Task InitAuth()
 		{
 			IsAppKeyScreen = false;
 			IsLoginScreen = true;
 			IsTweetScreen = false;
-			var applicationCredentials = new ConsumerCredentials(TWITTER_API_KEY, TWITTER_API_SECRET);
-			_authorizationContext = AuthFlow.InitAuthentication(applicationCredentials);
-			AuthorizationURL = _authorizationContext.AuthorizationURL;
+			var applicationCredentials = new TwitterCredentials(TWITTER_API_KEY, TWITTER_API_SECRET);
+			_applicationClient = new TwitterClient(applicationCredentials);
+			_authenticationRequest = await _applicationClient.Auth.RequestAuthenticationUrlAsync();
+			AuthorizationURL = _authenticationRequest.AuthorizationURL;
 		}
 
-		public void Logout()
+		public async Task Logout()
 		{
 			Settings.AuthKey = null;
 			Settings.AuthSecret = null;
 			Tweets.Clear();
-			InitAuth();
+			await InitAuth();
 		}
 
 		public void Authenticate()
 		{
 			IsNotAuthorizing = false;
-			ThreadPool.QueueUserWorkItem(q =>
+			ThreadPool.QueueUserWorkItem(async q =>
 			{
 				try
 				{
-					var credentials = AuthFlow.CreateCredentialsFromVerifierCode(AuthorizationCaptcha, _authorizationContext);
+					var credentials = await _applicationClient.Auth.RequestCredentialsFromVerifierCodeAsync(AuthorizationCaptcha, _authenticationRequest);
+					_applicationClient = new TwitterClient(credentials);
 					AuthorizationCaptcha = null;
 					if (Settings.RememberMe)
 					{
@@ -203,12 +210,13 @@ namespace TwitterNotifier
 						Settings.AuthKey = null;
 						Settings.AuthSecret = null;
 					}
-					ShowHomeTimeline(credentials);
+					await ShowHomeTimeline();
 				}
-				catch
+				catch (Exception e)
 				{
+					_logger.Error(e);
 					IsNotAuthorizing = true;
-					InitAuth();
+					await InitAuth();
 					MessageBox.Show("Invalid credentials specified. Please try again.");
 				}
 			});
@@ -248,12 +256,11 @@ namespace TwitterNotifier
 			return false;
 		}
 
-		private void ShowHomeTimeline(ITwitterCredentials credentials)
+		private async Task ShowHomeTimeline()
 		{
 			try
 			{
-				Auth.SetCredentials(credentials);
-				var timeline = Timeline.GetHomeTimeline();
+				var timeline = await _applicationClient.Timelines.GetHomeTimelineAsync();
 				if (timeline != null)
 				{
 					Application.Current.Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
@@ -268,7 +275,7 @@ namespace TwitterNotifier
 						TweetsHTML = BuildHTML();
 					}));
 				}
-				SubscribeToFilterStream(credentials);
+				await SubscribeToFilterStream();
 			}
 			finally
 			{
@@ -279,11 +286,12 @@ namespace TwitterNotifier
 			}
 		}
 
-		private void SubscribeToFilterStream(ITwitterCredentials credentials)
+		private async Task SubscribeToFilterStream()
 		{
-			var stream = Tweetinvi.Stream.CreateFilteredStream(credentials);
-			var user = User.GetAuthenticatedUser(credentials);
-			var following = User.GetFriendIds(user) ?? Enumerable.Empty<long>();
+			var stream = _applicationClient.Streams.CreateFilteredStream();
+			var user = await _applicationClient.Users.GetAuthenticatedUserAsync();
+			var following = await _applicationClient.Users.GetFriendIdsAsync(user);
+			following = following ?? new long[0];
 			foreach (var id in following)
 			{
 				stream.AddFollow(id);
@@ -296,7 +304,7 @@ namespace TwitterNotifier
 					NewTweet(e.Tweet);
 				}));
 			};
-			stream.StartStreamMatchingAllConditionsAsync();
+			var t = stream.StartMatchingAllConditionsAsync();
 		}
 
 		private void NewTweet(ITweet tweet)
