@@ -192,6 +192,11 @@ namespace TwitterNotifier
 
 		public void Authenticate()
 		{
+			if (string.IsNullOrWhiteSpace(AuthorizationCaptcha))
+			{
+				MessageBox.Show("Please specify the PIN from the Twitter login before proceeding");
+				return;
+			}
 			IsNotAuthorizing = false;
 			ThreadPool.QueueUserWorkItem(async q =>
 			{
