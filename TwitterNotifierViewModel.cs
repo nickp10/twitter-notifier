@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Collections.Specialized;
@@ -18,6 +19,7 @@ using NLog;
 using Tweetinvi;
 using Tweetinvi.Core.Helpers;
 using Tweetinvi.Models;
+using Tweetinvi.Streaming;
 
 namespace TwitterNotifier
 {
@@ -29,7 +31,9 @@ namespace TwitterNotifier
 		public const string TWITTER_API_SECRET = "nqRY6bpihJiVvwNEz4xfITJf2QAAszoZsDftwzz4kAyJePPh24";
 		private TwitterClient _applicationClient;
 		private IAuthenticationRequest _authenticationRequest;
+		private IFilteredStream _currentStream;
 		private string _settingsPath, _namesPath;
+		private System.Timers.Timer _refreshTimer;
 		private readonly string[] _urgentHandles;
 		private readonly byte[] _normalNotification, _keywordNotification, _urgentNotification;
 		private readonly IDictionary<string, string> _altNames = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
@@ -67,6 +71,22 @@ namespace TwitterNotifier
 				ErrorMsgs = errorMsgs;
 				await ShowInitialScreen();
 			});
+		}
+
+		#endregion
+
+		#region Properties
+
+		private readonly IEnumerable _refreshIntervalValues = new[]
+		{
+			new { Display = "1 Minute", Value = TimeSpan.FromMinutes(1).TotalMilliseconds },
+			new { Display = "30 Minutes", Value = TimeSpan.FromMinutes(30).TotalMilliseconds },
+			new { Display = "1 Hour", Value = TimeSpan.FromHours(1).TotalMilliseconds },
+			new { Display = "4 Hours", Value = TimeSpan.FromHours(4).TotalMilliseconds },
+		};
+		public IEnumerable RefreshIntervalValues
+		{
+			get { return _refreshIntervalValues; }
 		}
 
 		#endregion
@@ -268,19 +288,30 @@ namespace TwitterNotifier
 				var timeline = await _applicationClient.Timelines.GetHomeTimelineAsync();
 				if (timeline != null)
 				{
-					Application.Current.Dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
+					var dispatcher = Application.Current?.Dispatcher;
+					if (dispatcher != null)
 					{
-						foreach (var tweet in timeline)
+						dispatcher.Invoke(DispatcherPriority.Normal, new Action(() =>
 						{
-							if (Filter(tweet))
+							Tweets.Clear();
+							foreach (var tweet in timeline)
 							{
-								Tweets.Add(tweet);
+								if (Filter(tweet))
+								{
+									Tweets.Add(tweet);
+								}
 							}
-						}
-						TweetsHTML = BuildHTML();
-					}));
+							TweetsHTML = BuildHTML();
+						}));
+					}
 				}
-				await SubscribeToFilterStream();
+				_currentStream = await SubscribeToFilterStream();
+				_refreshTimer = new System.Timers.Timer(Settings.RefreshInterval)
+				{
+					AutoReset = false
+				};
+				_refreshTimer.Elapsed += OnRefreshTimerElapsed;
+				_refreshTimer.Start();
 			}
 			finally
 			{
@@ -291,7 +322,22 @@ namespace TwitterNotifier
 			}
 		}
 
-		private async Task SubscribeToFilterStream()
+		private void OnRefreshTimerElapsed(object sender, System.Timers.ElapsedEventArgs e)
+		{
+			_refreshTimer.Dispose();
+			if (_currentStream != null)
+			{
+				_currentStream.Stop();
+			}
+			ThreadPool.QueueUserWorkItem(async q =>
+			{
+				var credentials = _applicationClient.Credentials;
+				_applicationClient = new TwitterClient(credentials);
+				await ShowHomeTimeline();
+			});
+		}
+
+		private async Task<IFilteredStream> SubscribeToFilterStream()
 		{
 			var stream = _applicationClient.Streams.CreateFilteredStream();
 			var user = await _applicationClient.Users.GetAuthenticatedUserAsync();
@@ -304,12 +350,17 @@ namespace TwitterNotifier
 			stream.AddFollow(user);
 			stream.MatchingTweetReceived += (s, e) =>
 			{
-				Application.Current.Dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+				var dispatcher = Application.Current?.Dispatcher;
+				if (dispatcher != null)
 				{
-					NewTweet(e.Tweet);
-				}));
+					dispatcher.BeginInvoke(DispatcherPriority.Normal, new Action(() =>
+					{
+						NewTweet(e.Tweet);
+					}));
+				}
 			};
 			var t = stream.StartMatchingAllConditionsAsync();
+			return stream;
 		}
 
 		private void NewTweet(ITweet tweet)

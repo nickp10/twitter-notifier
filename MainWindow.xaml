@@ -66,6 +66,8 @@
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="10" />
 						<RowDefinition Height="Auto" />
+						<RowDefinition Height="10" />
+						<RowDefinition Height="Auto" />
 					</Grid.RowDefinitions>
 					<Grid.ColumnDefinitions>
 						<ColumnDefinition Width="200" />
@@ -194,7 +196,19 @@
 								Click="OnBrowseOutputDirectoryClick"
 								Content="Browse" />
 					</Grid>
-					<WrapPanel Grid.Row="16"
+					<Label Grid.Row="16"
+						   Grid.Column="0"
+						   Content="Refresh Interval:"
+						   Target="{Binding ElementName=RefreshIntervalComboBox}"
+						   VerticalAlignment="Center" />
+					<ComboBox Grid.Row="16"
+							  Grid.Column="2"
+							  ItemsSource="{Binding RefreshIntervalValues}"
+							  DisplayMemberPath="Display"
+							  SelectedValuePath="Value"
+							  SelectedValue="{Binding Settings.RefreshInterval, Mode=TwoWay}"
+							  x:Name="RefreshIntervalComboBox" />
+					<WrapPanel Grid.Row="18"
 							   Grid.ColumnSpan="3"
 							   HorizontalAlignment="Center">
 						<Button Content="Generate Key"

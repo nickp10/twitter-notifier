@@ -145,6 +145,20 @@ namespace TwitterNotifier
 				}
 			}
 		}
+		
+		private double _refreshInterval = 1_800_000; // 30 minutes to milliseconds
+		public double RefreshInterval
+		{
+			get { return _refreshInterval; }
+			set
+			{
+				if (_refreshInterval != value)
+				{
+					_refreshInterval = value;
+					OnPropertyChanged("RefreshInterval");
+				}
+			}
+		}
 
 		private bool _rememberMe = true;
 		public bool RememberMe
