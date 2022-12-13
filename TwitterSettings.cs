@@ -145,7 +145,7 @@ namespace TwitterNotifier
 				}
 			}
 		}
-		
+
 		private double _refreshInterval = 1_800_000; // 30 minutes to milliseconds
 		public double RefreshInterval
 		{
@@ -170,6 +170,20 @@ namespace TwitterNotifier
 				{
 					_rememberMe = value;
 					OnPropertyChanged("RememberMe");
+				}
+			}
+		}
+
+		private string _theme;
+		public string Theme
+		{
+			get { return string.IsNullOrWhiteSpace(_theme) ? "Light" : _theme; }
+			set
+			{
+				if (_theme != value)
+				{
+					_theme = value;
+					OnPropertyChanged("Theme");
 				}
 			}
 		}

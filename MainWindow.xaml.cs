@@ -12,7 +12,19 @@ namespace TwitterNotifier
 		public MainWindow()
 		{
 			InitializeComponent();
-			DataContext = new TwitterNotifierViewModel();
+			var vm = new TwitterNotifierViewModel();
+			if (System.Windows.Application.Current is App app)
+			{
+				app.LoadTheme(vm);
+				vm.Settings.PropertyChanged += (s, e) =>
+				{
+					if (e.PropertyName == "Theme")
+					{
+						app.LoadTheme(vm);
+					}
+				};
+			}
+			DataContext = vm;
 		}
 
 		private void OnAddKeywordClick(object sender, RoutedEventArgs e)

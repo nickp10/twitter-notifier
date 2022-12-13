@@ -89,6 +89,13 @@ namespace TwitterNotifier
 			get { return _refreshIntervalValues; }
 		}
 
+		public readonly IEnumerable<string> _themeValues = new[] { "Dark", "Light" };
+
+		public IEnumerable<string> ThemeValues
+		{
+			get { return _themeValues; }
+		}
+
 		#endregion
 
 		#region Methods
@@ -456,7 +463,13 @@ namespace TwitterNotifier
 			var builder = new StringBuilder();
 			foreach (var tweet in Tweets)
 			{
-				builder.Append("<div style=\"background-color: #FFFFFF; padding: 5px; margin-top: 10px; margin-left: 5px; margin-right: 5px; margin-bottom: 10px;\">");
+				var bg = Settings.Theme == "Dark" ? "#222222" : "#FFFFFF";
+				var fg = Settings.Theme == "Dark" ? "#FFFFFF" : "#000000";
+				builder.Append("<div style=\"background-color: ");
+				builder.Append(bg);
+				builder.Append("; color: ");
+				builder.Append(fg);
+				builder.Append("; padding: 5px; margin-top: 10px; margin-left: 5px; margin-right: 5px; margin-bottom: 10px;\">");
 				builder.Append("<b>");
 				builder.Append(FormatName(tweet.CreatedBy.ScreenName, tweet.CreatedBy.Name));
 				builder.Append("</b> <a href=\"https://twitter.com/");
@@ -585,6 +598,10 @@ namespace TwitterNotifier
 			else if (e.PropertyName == "Volume")
 			{
 				PlayNormalNotification();
+			}
+			else if (e.PropertyName == "Theme")
+			{
+				TweetsHTML = BuildHTML();
 			}
 			SaveSettings();
 		}

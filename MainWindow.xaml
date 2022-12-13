@@ -8,7 +8,7 @@
 	<Window.Resources>
 		<BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter" />
 	</Window.Resources>
-	<Grid Background="#E6ECF0"
+	<Grid Background="{DynamicResource MainBackground}"
 		  TextBlock.FontSize="{Binding Settings.FontSize}">
 		<Grid.RowDefinitions>
 			<RowDefinition Height="Auto" />
@@ -18,7 +18,7 @@
 		<ItemsControl ItemsSource="{Binding ErrorMsgs}">
 			<ItemsControl.ItemTemplate>
 				<DataTemplate>
-					<TextBlock Foreground="Red"
+					<TextBlock Foreground="{DynamicResource ErrorForeground}"
 							   Text="{Binding}" />
 				</DataTemplate>
 			</ItemsControl.ItemTemplate>
@@ -42,13 +42,15 @@
 			   IsOpen="{Binding ElementName=SettingsButton, Path=IsChecked}"
 			   x:Name="SettingsPopup">
 			<Border BorderThickness="2"
-					BorderBrush="Black"
+					BorderBrush="{DynamicResource SettingsBorder}"
 					CornerRadius="2"
-					Background="White"
+					Background="{DynamicResource SettingsBackground}"
 					Padding="10"
 					Width="550">
 				<Grid>
 					<Grid.RowDefinitions>
+						<RowDefinition Height="Auto" />
+						<RowDefinition Height="10" />
 						<RowDefinition Height="Auto" />
 						<RowDefinition Height="10" />
 						<RowDefinition Height="Auto" />
@@ -77,6 +79,7 @@
 					<Label Grid.Row="0"
 						   Grid.Column="0"
 						   Content="Font Size:"
+						   Foreground="{DynamicResource SettingsForeground}"
 						   Target="{Binding ElementName=FontSizeSlider}"
 						   VerticalAlignment="Center" />
 					<Slider Grid.Row="0"
@@ -89,6 +92,7 @@
 					<Label Grid.Row="2"
 						   Grid.Column="0"
 						   Content="Volume (Normal):"
+						   Foreground="{DynamicResource SettingsForeground}"
 						   Target="{Binding ElementName=VolumeSlider}"
 						   VerticalAlignment="Center" />
 					<Slider Grid.Row="2"
@@ -101,6 +105,7 @@
 					<Label Grid.Row="4"
 						   Grid.Column="0"
 						   Content="Volume (Keyword):"
+						   Foreground="{DynamicResource SettingsForeground}"
 						   Target="{Binding ElementName=KeywordVolumeSlider}"
 						   VerticalAlignment="Center" />
 					<Slider Grid.Row="4"
@@ -113,6 +118,7 @@
 					<Label Grid.Row="6"
 						   Grid.Column="0"
 						   Content="Volume (Urgent):"
+						   Foreground="{DynamicResource SettingsForeground}"
 						   Target="{Binding ElementName=UrgentVolumeSlider}"
 						   VerticalAlignment="Center" />
 					<Slider Grid.Row="6"
@@ -125,6 +131,7 @@
 					<Label Grid.Row="8"
 						   Grid.Column="0"
 						   Content="Ignore Retweets:"
+						   Foreground="{DynamicResource SettingsForeground}"
 						   Target="{Binding ElementName=IgnoreRetweetsCheckbox}"
 						   VerticalAlignment="Center" />
 					<CheckBox Grid.Row="8"
@@ -135,6 +142,7 @@
 					<Label Grid.Row="10"
 						   Grid.Column="0"
 						   Content="Ignore Reply To's:"
+						   Foreground="{DynamicResource SettingsForeground}"
 						   Target="{Binding ElementName=IgnoreReplyTosCheckbox}"
 						   VerticalAlignment="Center" />
 					<CheckBox Grid.Row="10"
@@ -145,6 +153,7 @@
 					<Label Grid.Row="12"
 						   Grid.Column="0"
 						   Content="Keywords:"
+						   Foreground="{DynamicResource SettingsForeground}"
 						   Target="{Binding ElementName=KeywordTextBox}"
 						   VerticalAlignment="Center" />
 					<Grid Grid.Row="12"
@@ -163,23 +172,30 @@
 						</Grid.ColumnDefinitions>
 						<ListBox Grid.Row="0"
 								 Grid.ColumnSpan="3"
+								 Background="Transparent"
+								 TextElement.Foreground="{DynamicResource SettingsForeground}"
 								 ItemsSource="{Binding Settings.KeywordsView}"
 								 IsSynchronizedWithCurrentItem="True" />
 						<Button Grid.Row="2"
 								Grid.ColumnSpan="3"
 								Click="OnRemoveKeywordClick"
-								Content="Remove" />
+								Content="Remove"
+								Cursor="Hand" />
 						<TextBox Grid.Row="4"
 								 Grid.Column="0"
+								 Background="Transparent"
+								 Foreground="{DynamicResource SettingsForeground}"
 								 x:Name="KeywordTextBox" />
 						<Button Grid.Row="4"
 								Grid.Column="2"
 								Click="OnAddKeywordClick"
-								Content="Add" />
+								Content="Add"
+								Cursor="Hand" />
 					</Grid>
 					<Label Grid.Row="14"
 						   Grid.Column="0"
 						   Content="Output Directory:"
+						   Foreground="{DynamicResource SettingsForeground}"
 						   Target="{Binding ElementName=OutputDirectoryTextBox}"
 						   VerticalAlignment="Center" />
 					<Grid Grid.Row="14"
@@ -190,15 +206,19 @@
 							<ColumnDefinition Width="Auto" />
 						</Grid.ColumnDefinitions>
 						<TextBox Grid.Column="0"
+								 Background="Transparent"
+								 Foreground="{DynamicResource SettingsForeground}"
 								 Text="{Binding Settings.OutputDirectory}"
 								 x:Name="OutputDirectoryTextBox" />
 						<Button Grid.Column="2"
 								Click="OnBrowseOutputDirectoryClick"
-								Content="Browse" />
+								Content="Browse"
+								Cursor="Hand" />
 					</Grid>
 					<Label Grid.Row="16"
 						   Grid.Column="0"
 						   Content="Refresh Interval:"
+						   Foreground="{DynamicResource SettingsForeground}"
 						   Target="{Binding ElementName=RefreshIntervalComboBox}"
 						   VerticalAlignment="Center" />
 					<ComboBox Grid.Row="16"
@@ -208,7 +228,18 @@
 							  SelectedValuePath="Value"
 							  SelectedValue="{Binding Settings.RefreshInterval, Mode=TwoWay}"
 							  x:Name="RefreshIntervalComboBox" />
-					<WrapPanel Grid.Row="18"
+					<Label Grid.Row="18"
+						   Grid.Column="0"
+						   Content="Theme:"
+						   Foreground="{DynamicResource SettingsForeground}"
+						   Target="{Binding ElementName=ThemeComboBox}"
+						   VerticalAlignment="Center" />
+					<ComboBox Grid.Row="18"
+							  Grid.Column="2"
+							  ItemsSource="{Binding ThemeValues}"
+							  SelectedValue="{Binding Settings.Theme, Mode=TwoWay}"
+							  x:Name="ThemeComboBox" />
+					<WrapPanel Grid.Row="20"
 							   Grid.ColumnSpan="3"
 							   HorizontalAlignment="Center">
 						<Button Content="Generate Key"
@@ -251,15 +282,19 @@
 			<Label Grid.Row="2"
 				   Grid.Column="0"
 				   Content="Enter the PIN from the Login:"
+				   Foreground="{DynamicResource MainForeground}"
 				   Target="{Binding ElementName=CaptchaTextBox}"
 				   VerticalAlignment="Center" />
 			<TextBox Grid.Row="2"
 					 Grid.Column="2"
+					 Background="Transparent"
+					 Foreground="{DynamicResource SettingsForeground}"
 					 Text="{Binding AuthorizationCaptcha}"
 					 VerticalAlignment="Center"
 					 x:Name="CaptchaTextBox" />
 			<CheckBox Grid.Row="4"
 					  Grid.ColumnSpan="3"
+					  Foreground="{DynamicResource MainForeground}"
 					  HorizontalAlignment="Center"
 					  VerticalAlignment="Center"
 					  VerticalContentAlignment="Center"
@@ -270,6 +305,7 @@
 					IsEnabled="{Binding IsNotAuthorizing}"
 					Content="Login"
 					Click="OnLoginClick"
+					Cursor="Hand"
 					Padding="10,5"
 					HorizontalAlignment="Center" />
 		</Grid>
@@ -297,11 +333,14 @@
 			</Grid.RowDefinitions>
 			<Label Grid.Row="0"
 				   Grid.Column="0"
+				   Foreground="{DynamicResource SettingsForeground}"
 				   Content="Enter an application key:"
 				   Target="{Binding ElementName=AppKeyTextBox}"
 				   VerticalAlignment="Center" />
 			<TextBox Grid.Row="0"
 					 Grid.Column="2"
+					 Background="Transparent"
+					 Foreground="{DynamicResource SettingsForeground}"
 					 Text="{Binding EnteredAppKey}"
 					 VerticalAlignment="Center"
 					 x:Name="AppKeyTextBox" />
@@ -309,6 +348,7 @@
 					Grid.ColumnSpan="3"
 					Content="Validate Key"
 					Click="OnValidateAppKeyClick"
+					Cursor="Hand"
 					Padding="10,5"
 					HorizontalAlignment="Center" />
 		</Grid>

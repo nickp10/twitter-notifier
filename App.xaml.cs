@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Windows;
+using System.Windows.Navigation;
 using NLog;
 
 namespace TwitterNotifier
@@ -41,6 +42,13 @@ namespace TwitterNotifier
 		private void LogUnhandledException(Exception exception, string source)
 		{
 			_logger.Error(exception, source);
+		}
+
+		public void LoadTheme(TwitterNotifierViewModel vm)
+		{
+			var theme = vm.Settings.Theme;
+			Resources.MergedDictionaries.RemoveAt(0);
+			Resources.MergedDictionaries.Insert(0, new ResourceDictionary { Source = new Uri(string.Format("/Themes/{0}Theme.xaml", theme), UriKind.RelativeOrAbsolute) });
 		}
 
 		#endregion
